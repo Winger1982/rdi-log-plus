@@ -1,0 +1,32 @@
+{
+  "name": "rdi-log-plus",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite",
+    "bridge": "node server/clusterdx-bridge.mjs"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "axios-cookiejar-support": "^5.0.5",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "leaflet": "^1.9.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-leaflet": "^5.0.0",
+    "tough-cookie": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^6.3.5"
+  }
+}

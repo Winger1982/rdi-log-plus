@@ -1,0 +1,95 @@
+app.get('/api/spots', async (req, res) => {
+  try {
+    const loadSize = Number(req.query.loadSize || DEFAULT_LOAD_SIZE);
+
+    if (!authState.loggedIn) {
+      return res.status(401).json({
+        ok: false,
+        error: 'Not logged in to ClusterDX yet.',
+      });
+    }
+
+    const spots = await fetchClusterDxSpots({ loadSize });
+
+    res.json({
+      ok: true,
+      count: spots.length,
+      loadSize,
+      fetchedAt: authState.lastFetchAt,
+      spots,
+    });
+  } catch (error) {
+    authState.lastError = error instanceof Error ? error.message : 'Fetch failed.';
+    res.status(500).json({
+      ok: false,
+      error: authState.lastError,
+    });
+  }
+});
+
+app.post('/api/logout', async (_req, res) => {
+  try {
+    await new Promise((resolve, reject) => {
+      jar.removeAllCookies((err) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    });
+
+    authState = {
+      loggedIn: false,
+      lastLoginAt: null,
+      lastFetchAt: null,
+      lastError: null,
+    };
+
+    res.json({ ok: true, loggedIn: false });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Logout failed.',
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`ClusterDX bridge running on http://localhost:${PORT}`);
+  console.log(`Login URL: ${CLUSTERDX_LOGIN_URL}`);
+  console.log(`Spots URL: ${CLUSTERDX_SPOTS_URL}`);
+});
+
+function parseHtmlSpots(html) {
+  const $ = cheerio.load(html);
+  const results = [];
+
+  $('table.spots tbody tr').each((_, row) => {
+    const timestamp = normalizeWhitespace($(row).find('td.timestamp').text());
+    const spotter = normalizeWhitespace($(row).find('td.spotter').text());
+    const freqRaw = normalizeWhitespace($(row).find('td.freq').text());
+    const dxcall = normalizeWhitespace($(row).find('td.dxcall').text());
+    const comment = normalizeWhitespace($(row).find('td.comment').text());
+
+    if (!dxcall) return;
+
+    const guessedGrid = guessGridFromCallsign(dxcall);
+    if (!guessedGrid) return;
+
+    const frequency =
+      freqRaw && /^\d+$/.test(freqRaw)
+        ? `${freqRaw.slice(0, 2)}.${freqRaw.slice(2)}`
+        : freqRaw;
+
+    const station = textToStation({
+      callsign: dxcall,
+      operatorName: spotter || undefined,
+      gridSquare: guessedGrid,
+      country: inferCountryFromCallsign(dxcall),
+      frequency,
+      mode: detectMode(comment),
+      utcTime: timestamp ? timestamp.split(' ')[1]?.slice(0, 5) : '',
+      rawText: `${timestamp} | ${spotter} | ${freqRaw} | ${dxcall} | ${comment}`,
+    });
+
+    if (station) {
+      results.push(station);
+    }
