@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, ChangeEvent } from 'react';
+import { createClient, type User } from '@supabase/supabase-js';
+import type { CSSProperties, ChangeEvent, FormEvent } from 'react';
 import type { Logbook } from './lib/logbook-types';
 import type { RdiLogRecord } from './lib/types';
 import RDILiveMap from './components/RDILiveMap';
@@ -8,6 +9,7 @@ type WeatherStatus = 'CLEAR' | 'WATCH' | 'WARNING';
 type StationMode = 'HOME' | 'PORTABLE' | 'MOBILE';
 type DistanceUnit = 'KM' | 'MI';
 type DataMode = 'OFFLINE' | 'ONLINE';
+type MapTheme = 'LIGHT' | 'DARK';
 type ClusterLoginState = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
 type StationProfile = {
@@ -16,6 +18,7 @@ type StationProfile = {
   gridSquare: string;
   stationMode: StationMode;
   distanceUnit: DistanceUnit;
+  mapTheme: MapTheme;
   latitude: string;
   longitude: string;
 };
@@ -112,6 +115,15 @@ type EditContactForm = {
 
 type EditContactErrors = Partial<Record<keyof EditContactForm, string>>;
 
+type AuthProfile = {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  callsign: string | null;
+  role: 'admin' | 'tester';
+  approved: boolean;
+};
+
 type RDIConsoleMockupProps = {
   activeLogbook: Logbook | null;
   logbooks: Logbook[];
@@ -132,8 +144,11 @@ type RDIConsoleMockupProps = {
 type SortField = 'callsign' | 'date' | 'time' | 'frequency' | 'mode';
 
 const BRIDGE_BASE_URL = 'http://localhost:8787';
+const SUPABASE_URL = 'https://axhpjwqvdtjeyqyiqoyg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_6hEILqgZS51Q7Bk5OiusKw_BcsDHq07';
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
 const CLUSTER_STORAGE_KEY = 'rdi.console.cluster';
+const WELCOME_OVERLAY_STORAGE_KEY = 'rdi.console.hideWelcomeOverlay';
 const COORDINATE_HELP_URL = 'https://gps-coordinates.org/';
 const RDI_LOGO_SRC = '/rdi-logo.png';
 const PROPAGATION_SOURCE_FALLBACK = 'https://www.dxproof.com/propagation_46860.asp';
@@ -143,11 +158,12 @@ const MIN_FREQUENCY_MHZ = 26.0;
 const MAX_FREQUENCY_MHZ = 27.999;
 
 const DEFAULT_PROFILE: StationProfile = {
-  operatorName: 'Fred',
-  callsign: '9RDI01',
-  gridSquare: 'FN25',
+  operatorName: '',
+  callsign: '',
+  gridSquare: '',
   stationMode: 'HOME',
   distanceUnit: 'KM',
+  mapTheme: 'LIGHT',
   latitude: '',
   longitude: '',
 };
@@ -190,6 +206,15 @@ const DESIRED_PRESETS: ToolPreset[] = [
   { label: 'RDI 11m Net', frequency: '27.405', mode: 'USB' },
   { label: 'Local Calling Frequency Americas', frequency: '27.385', mode: 'LSB' },
 ];
+
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
+  : null;
 
 function windDirectionToCompass(degrees: number | undefined): string {
   if (degrees === undefined || Number.isNaN(degrees)) return '';
@@ -352,6 +377,17 @@ export default function RDIConsoleMockup({
   const [utcNow, setUtcNow] = useState(new Date());
   const [showSetup, setShowSetup] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showQuickStart, setShowQuickStart] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem(WELCOME_OVERLAY_STORAGE_KEY) !== 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [dontShowWelcomeAgain, setDontShowWelcomeAgain] = useState(false);
   const [showWeatherWarning, setShowWeatherWarning] = useState(false);
   const [showFindContact, setShowFindContact] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
@@ -367,6 +403,15 @@ export default function RDIConsoleMockup({
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentQsoPage, setCurrentQsoPage] = useState(1);
+
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authProfile, setAuthProfile] = useState<AuthProfile | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [hasLoggedAppOpen, setHasLoggedAppOpen] = useState(false);
 
   const [profile, setProfile] = useState<StationProfile>(() => {
     if (typeof window === 'undefined') return DEFAULT_PROFILE;
@@ -402,6 +447,132 @@ export default function RDIConsoleMockup({
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [weather, setWeather] = useState<StationWeather>(DEFAULT_WEATHER);
   const [propagation, setPropagation] = useState<PropagationData>(DEFAULT_PROPAGATION);
+
+  const syncProfileFromAuth = useCallback((profileRow: AuthProfile | null) => {
+    if (!profileRow) return;
+
+    setProfile((prev) => ({
+      ...prev,
+      operatorName: prev.operatorName || profileRow.display_name || '',
+      callsign: prev.callsign || profileRow.callsign || '',
+    }));
+
+    setProfileDraft((prev) => ({
+      ...prev,
+      operatorName: prev.operatorName || profileRow.display_name || '',
+      callsign: prev.callsign || profileRow.callsign || '',
+    }));
+  }, []);
+
+  const logActivity = useCallback(
+    async (eventName: string, eventDetail?: string, userIdOverride?: string) => {
+      const userId = userIdOverride || authUser?.id;
+      if (!supabase || !userId) return;
+
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: userId,
+          event_name: eventName,
+          event_detail: eventDetail || null,
+        });
+      } catch {
+        // ignore beta logging failures
+      }
+    },
+    [authUser],
+  );
+
+  const loadAuthProfile = useCallback(
+    async (userId: string) => {
+      if (!supabase) {
+        setAuthError('Supabase is not configured.');
+        setAuthLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, display_name, callsign, role, approved')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        setAuthError(error.message || 'Unable to load beta profile.');
+        setAuthProfile(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const nextProfile = (data || null) as AuthProfile | null;
+      setAuthProfile(nextProfile);
+      syncProfileFromAuth(nextProfile);
+      setAuthLoading(false);
+    },
+    [syncProfileFromAuth],
+  );
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthError('Supabase is not configured.');
+      setAuthLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const bootstrap = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!active) return;
+
+      const nextUser = session?.user ?? null;
+      setAuthUser(nextUser);
+
+      if (nextUser) {
+        await loadAuthProfile(nextUser.id);
+      } else {
+        setAuthProfile(null);
+        setAuthLoading(false);
+      }
+    };
+
+    void bootstrap();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = session?.user ?? null;
+      setAuthUser(nextUser);
+      setHasLoggedAppOpen(false);
+
+      if (nextUser) {
+        setAuthLoading(true);
+        void loadAuthProfile(nextUser.id);
+      } else {
+        setAuthProfile(null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [loadAuthProfile]);
+
+  useEffect(() => {
+    if (!authUser || !authProfile?.approved || hasLoggedAppOpen) return;
+    void logActivity('app_opened', 'Opened RDI Log Plus dashboard', authUser.id);
+    setHasLoggedAppOpen(true);
+  }, [authProfile?.approved, authUser, hasLoggedAppOpen, logActivity]);
+
+  useEffect(() => {
+    if (!authUser && hasLoggedAppOpen) {
+      setHasLoggedAppOpen(false);
+    }
+  }, [authUser, hasLoggedAppOpen]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -576,7 +747,7 @@ export default function RDIConsoleMockup({
     background: 'rgba(72, 132, 235, 0.38)',
   };
 
-  const saveSetupButtonStyle: CSSProperties = useMemo(
+  const saveSetupButtonStyle = useMemo(
     () => ({
       ...primaryButtonStyle,
       background:
@@ -1135,6 +1306,7 @@ export default function RDIConsoleMockup({
       gridSquare: profileDraft.gridSquare.trim().toUpperCase() || DEFAULT_PROFILE.gridSquare,
       stationMode: profileDraft.stationMode,
       distanceUnit: profileDraft.distanceUnit,
+      mapTheme: profileDraft.mapTheme,
       latitude: profileDraft.latitude.trim(),
       longitude: profileDraft.longitude.trim(),
     };
@@ -1161,6 +1333,7 @@ export default function RDIConsoleMockup({
       setLastSavedAt(nowLabel);
       setSaveMessage('Settings saved successfully.');
       setSaveMessageTone('success');
+      void logActivity('setup_saved', 'Saved console and cluster settings.');
     } catch {
       setSaveMessage('Settings could not be saved locally.');
       setSaveMessageTone('error');
@@ -1264,8 +1437,535 @@ export default function RDIConsoleMockup({
     minWidth: 0,
   };
 
+
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!supabase) {
+      setAuthError('Supabase is not configured.');
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError('');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: authEmail.trim(),
+      password: authPassword,
+    });
+
+    if (error) {
+      setAuthError(error.message || 'Unable to sign in.');
+      setAuthBusy(false);
+      return;
+    }
+
+    if (data.user) {
+      void logActivity('signed_in', 'Signed in to RDI Log Plus beta.', data.user.id);
+    }
+
+    setAuthBusy(false);
+  };
+
+  const handleSignOut = async () => {
+    if (!supabase) return;
+
+    setAuthBusy(true);
+    if (authUser) {
+      await logActivity('signed_out', 'Signed out of RDI Log Plus beta.', authUser.id);
+    }
+    await supabase.auth.signOut();
+    setAuthProfile(null);
+    setAuthUser(null);
+    setAuthBusy(false);
+  };
+
+  const handleRefreshBetaProfile = async () => {
+    if (!authUser) return;
+    setAuthLoading(true);
+    setAuthError('');
+    await loadAuthProfile(authUser.id);
+  };
+
+  const handleOpenQuickStart = () => {
+    setShowQuickStart(true);
+    void logActivity('quick_start_opened', 'Opened Quick Start Guide.');
+  };
+
+  const handleOpenWhatsNew = () => {
+    setShowWhatsNew(true);
+    void logActivity('whats_new_opened', "Opened What's New panel.");
+  };
+
+  const handleCloseWelcomeOverlay = () => {
+    try {
+      if (dontShowWelcomeAgain) {
+        window.localStorage.setItem(WELCOME_OVERLAY_STORAGE_KEY, 'true');
+      } else {
+        window.localStorage.removeItem(WELCOME_OVERLAY_STORAGE_KEY);
+      }
+    } catch {
+      // ignore
+    }
+
+    setShowWelcomeOverlay(false);
+  };
+
+  const handleOpenClusterDxSignup = () => {
+    window.open('https://clusterdx.org/auth-register.php', '_blank', 'noopener,noreferrer');
+  };
+
+  if (authLoading) {
+    return (
+      <div style={shellStyle}>
+        <div
+          style={{
+            maxWidth: '520px',
+            margin: '8vh auto 0',
+            ...panelStyle,
+            textAlign: 'center',
+            display: 'grid',
+            gap: '12px',
+          }}
+        >
+          <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>RDI Log Plus Beta</div>
+          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+            Checking your beta access and loading your profile…
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <div style={shellStyle}>
+        <form
+          onSubmit={handleSignIn}
+          style={{
+            maxWidth: '520px',
+            margin: '7vh auto 0',
+            ...panelStyle,
+            display: 'grid',
+            gap: '14px',
+          }}
+        >
+          <div style={{ display: 'grid', gap: '4px' }}>
+            <div style={{ fontSize: '1.55rem', fontWeight: 800 }}>RDI Log Plus Beta Login</div>
+            <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+              Approved beta testers can sign in here using the email and password provided for testing.
+            </div>
+          </div>
+
+          <div>
+            <div style={labelStyle}>Email</div>
+            <input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} style={inputStyle} autoComplete="email" required />
+          </div>
+
+          <div>
+            <div style={labelStyle}>Password</div>
+            <input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} style={inputStyle} autoComplete="current-password" required />
+          </div>
+
+          {authError && (
+            <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(185, 28, 28, 0.18)', border: '1px solid rgba(248, 113, 113, 0.45)', color: '#fee2e2', fontWeight: 700 }}>
+              {authError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
+              {authBusy ? 'Signing In…' : 'Sign In'}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  if (!authProfile) {
+    return (
+      <div style={shellStyle}>
+        <div style={{ maxWidth: '560px', margin: '8vh auto 0', ...panelStyle, display: 'grid', gap: '14px' }}>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>Preparing Your Beta Profile</div>
+          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+            Your login worked, but your beta profile is not ready yet. Use refresh once, and if it still does not appear,
+            check that your user exists in Supabase Authentication and Profiles.
+          </div>
+          {authError && (
+            <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(185, 28, 28, 0.18)', border: '1px solid rgba(248, 113, 113, 0.45)', color: '#fee2e2', fontWeight: 700 }}>
+              {authError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button type="button" style={primaryButtonStyle} onClick={handleRefreshBetaProfile}>Refresh Profile</button>
+            <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>Sign Out</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authProfile.approved) {
+    return (
+      <div style={shellStyle}>
+        <div style={{ maxWidth: '560px', margin: '8vh auto 0', ...panelStyle, display: 'grid', gap: '14px' }}>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>Beta Access Pending</div>
+          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+            Your account has signed in successfully, but beta access has not been approved yet.
+          </div>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(251, 191, 36, 0.10)', border: '1px solid rgba(251, 191, 36, 0.24)', color: '#fff7ed', lineHeight: 1.7, fontWeight: 600 }}>
+            Signed in as <strong>{authProfile.email || authUser.email || 'tester'}</strong>. Once approved, refresh or sign in again.
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button type="button" style={primaryButtonStyle} onClick={handleRefreshBetaProfile}>Refresh Access</button>
+            <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>Sign Out</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={shellStyle}>
+
+      {showWelcomeOverlay && (
+        <div
+          onClick={handleCloseWelcomeOverlay}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.72)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '720px',
+              background: 'rgba(18, 33, 56, 0.98)',
+              border: '1px solid rgba(125, 180, 255, 0.28)',
+              borderRadius: '18px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+              padding: '22px',
+              display: 'grid',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '6px' }}>
+                Welcome to RDI Log Plus
+              </div>
+              <div style={{ color: '#cfe0f4', fontSize: '0.96rem', lineHeight: 1.7 }}>
+                Your 11m operating companion for logging, live activity, weather awareness, and
+                propagation insight — all in one place.
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '14px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+              }}
+            >
+              <div style={{ ...labelStyle, marginBottom: '10px' }}>Feature Highlights</div>
+              <div style={{ display: 'grid', gap: '8px', fontSize: '0.94rem', lineHeight: 1.6 }}>
+                <div>• Easy 11m QSO logging</div>
+                <div>• Quick access presets</div>
+                <div>• Live station map</div>
+                <div>• Rain and weather awareness</div>
+                <div>• Propagation snapshot</div>
+                <div>• Light or dark map choice</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '14px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+              }}
+            >
+              <div style={{ ...labelStyle, marginBottom: '10px' }}>Get Started</div>
+              <div style={{ display: 'grid', gap: '8px', fontSize: '0.94rem', lineHeight: 1.7 }}>
+                <div>1. Create your free ClusterDX account if needed</div>
+                <div>2. Open Setup and enter your station details</div>
+                <div>3. Choose your map style</div>
+                <div>4. Save your settings</div>
+                <div>5. Start using RDI Log Plus</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                color: '#cfe0f4',
+                fontSize: '0.94rem',
+                lineHeight: 1.7,
+              }}
+            >
+              Take a moment to set up your station profile and make the dashboard your own.
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '12px',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  color: '#d7e3f1',
+                  fontSize: '0.92rem',
+                  fontWeight: 600,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={dontShowWelcomeAgain}
+                  onChange={(event) => setDontShowWelcomeAgain(event.target.checked)}
+                />
+                Don’t show this again
+              </label>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenClusterDxSignup}>
+                  Join ClusterDX
+                </button>
+                <button type="button" style={primaryButtonStyle} onClick={handleCloseWelcomeOverlay}>
+                  Get Started
+                </button>
+                <button type="button" style={compactButtonStyle} onClick={handleCloseWelcomeOverlay}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQuickStart && (
+        <div
+          onClick={() => setShowQuickStart(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '760px',
+              background: 'rgba(18, 33, 56, 0.98)',
+              border: '1px solid rgba(125, 180, 255, 0.28)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)',
+              padding: '20px',
+              display: 'grid',
+              gap: '16px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>Quick Start Guide</div>
+                <div style={{ color: '#bfd0e4', fontSize: '0.92rem', marginTop: '4px' }}>
+                  Get up and running with RDI Log Plus in a few quick steps.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenClusterDxSignup}>
+                  Join ClusterDX
+                </button>
+                <button type="button" style={compactButtonStyle} onClick={() => setShowQuickStart(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+              }}
+            >
+              <strong>Before you begin:</strong> create your free ClusterDX account if you do not already have one,
+              then return to the app to complete Setup and connect the live features.
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+              }}
+            >
+              <div style={{ ...labelStyle, marginBottom: '10px' }}>Quick Start</div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <div>1. Join ClusterDX for free if you do not already have an account.</div>
+                <div>2. Open <strong>Setup</strong> and enter your operator name, callsign, and grid square.</div>
+                <div>3. Choose your <strong>Station Mode</strong>, <strong>Distance Units</strong>, and <strong>Map Theme</strong>.</div>
+                <div>4. Enter your <strong>Latitude</strong> and <strong>Longitude</strong> to enable live weather.</div>
+                <div>5. Save your settings.</div>
+                <div>6. Enter your ClusterDX login details, then use <strong>Connect</strong> and <strong>Check Status</strong>.</div>
+                <div>7. Use <strong>Add QSO</strong>, <strong>Quick Presets</strong>, <strong>Find Contact</strong>, and <strong>Edit Contacts</strong> to explore the app.</div>
+                <div>8. Close and reopen the app later to confirm your settings remain saved.</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'rgba(251, 191, 36, 0.10)',
+                border: '1px solid rgba(251, 191, 36, 0.24)',
+                color: '#fff7ed',
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+                fontWeight: 600,
+              }}
+            >
+              Beta testers: please watch for anything confusing, any save/load issues, map oddities, or contact handling that does not feel smooth.
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {showWhatsNew && (
+        <div
+          onClick={() => setShowWhatsNew(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '760px',
+              background: 'rgba(18, 33, 56, 0.98)',
+              border: '1px solid rgba(125, 180, 255, 0.28)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)',
+              padding: '20px',
+              display: 'grid',
+              gap: '16px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>What’s New</div>
+                <div style={{ color: '#bfd0e4', fontSize: '0.92rem', marginTop: '4px' }}>
+                  A quick look at the main features now included in RDI Log Plus.
+                </div>
+              </div>
+
+              <button type="button" style={compactButtonStyle} onClick={() => setShowWhatsNew(false)}>
+                Close
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+              }}
+            >
+              <div style={{ ...labelStyle, marginBottom: '10px' }}>Feature Summary</div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <div>• Live 11m activity map with clickable spots for rotor heading and distance</div>
+                <div>• Rain weather overlay with station-focused operating awareness</div>
+                <div>• Light and dark map theme choice in Setup</div>
+                <div>• Station profile saving for operator name, callsign, grid square, and coordinates</div>
+                <div>• Quick presets for common 11m operating frequencies</div>
+                <div>• QSO logging, import, export, contact search, and contact editing</div>
+                <div>• Welcome overlay with ClusterDX signup link and first-open guidance</div>
+                <div>• Quick Start Guide built into the app for new users and beta testers</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e7f1ff',
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+              }}
+            >
+              <div style={{ ...labelStyle, marginBottom: '10px' }}>Beta Test Focus</div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <div>• Confirm settings remain saved after closing and reopening the app</div>
+                <div>• Test the live map, rain layer, and map theme switching</div>
+                <div>• Add, find, edit, and review contacts in normal use</div>
+                <div>• Watch for anything unclear, awkward, or out of place in the workflow</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAbout && (
         <div
           onClick={() => setShowAbout(false)}
@@ -1985,8 +2685,9 @@ export default function RDIConsoleMockup({
 
       <div
         style={{
-          maxWidth: '1560px',
-          margin: '0 auto',
+          width: '100%',
+          maxWidth: 'none',
+          margin: 0,
           display: 'grid',
           gap: '12px',
         }}
@@ -2033,6 +2734,12 @@ export default function RDIConsoleMockup({
             <div style={headerBadgeStyle(clusterBadge.background, clusterBadge.border, clusterBadge.color)}>
               {clusterSettings.clusterName} {clusterBadge.label}
             </div>
+            <div style={headerBadgeStyle('rgba(255,255,255,0.05)', 'rgba(180, 200, 226, 0.2)', '#f0f6ff')}>
+              {authProfile.callsign || authProfile.display_name || authUser.email || 'Beta User'}
+            </div>
+            <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>
+              Sign Out
+            </button>
           </div>
         </div>
 
@@ -2143,6 +2850,23 @@ export default function RDIConsoleMockup({
                   >
                     <option value="KM">KM (Metric)</option>
                     <option value="MI">MI (Standard)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <div style={labelStyle}>Map Theme</div>
+                  <select
+                    value={profileDraft.mapTheme}
+                    onChange={(event) =>
+                      setProfileDraft((prev) => ({
+                        ...prev,
+                        mapTheme: event.target.value as MapTheme,
+                      }))
+                    }
+                    style={selectStyle}
+                  >
+                    <option value="LIGHT">LIGHT</option>
+                    <option value="DARK">DARK</option>
                   </select>
                 </div>
 
@@ -2325,9 +3049,10 @@ export default function RDIConsoleMockup({
             gridTemplateColumns: 'minmax(0, 1.5fr) minmax(340px, 1fr)',
             gap: '14px',
             alignItems: 'start',
+            width: '100%',
           }}
         >
-          <div style={{ display: 'grid', gap: '10px' }}>
+          <div style={{ display: 'grid', gap: '10px', minWidth: 0 }}>
             <div style={panelStyle}>
               <div
                 style={{
@@ -2343,6 +3068,12 @@ export default function RDIConsoleMockup({
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <button type="button" style={compactButtonStyle} onClick={() => setShowAbout(true)}>
                     About
+                  </button>
+                  <button type="button" style={compactButtonStyle} onClick={handleOpenQuickStart}>
+                    Quick Start
+                  </button>
+                  <button type="button" style={compactButtonStyle} onClick={handleOpenWhatsNew}>
+                    What’s New
                   </button>
                   <button type="button" style={compactButtonStyle} onClick={() => setShowSetup((prev) => !prev)}>
                     ⚙ Setup
@@ -2492,7 +3223,6 @@ export default function RDIConsoleMockup({
 
               <div
                 style={{
-                  minHeight: '650px',
                   borderRadius: '14px',
                   overflow: 'hidden',
                   border: '1px solid rgba(255,255,255,0.08)',
@@ -2500,12 +3230,21 @@ export default function RDIConsoleMockup({
                   marginTop: '0',
                 }}
               >
-                <RDILiveMap dataMode={dataMode} />
+                <RDILiveMap
+                  dataMode={dataMode}
+                  mapTheme={profile.mapTheme === 'DARK' ? 'dark' : 'light'}
+                  stationProfile={{
+                    operatorName: profile.operatorName,
+                    callsign: profile.callsign,
+                    gridSquare: profile.gridSquare,
+                    distanceUnit: profile.distanceUnit,
+                  }}
+                />
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: '12px' }}>
+          <div style={{ display: 'grid', gap: '12px', minWidth: 0 }}>
             <div style={panelStyle}>
               <div
                 style={{
@@ -2536,8 +3275,19 @@ export default function RDIConsoleMockup({
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                <button type="button" style={primaryButtonStyle} onClick={onCreateLogbook}>
-                  Create
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    ...primaryButtonStyle,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    color: 'transparent',
+                    cursor: 'default',
+                    opacity: 0.45,
+                  }}
+                >
+                  &nbsp;
                 </button>
                 <button
                   type="button"

@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-leaflet';
+import {
+  Circle,
+  CircleMarker,
+  MapContainer,
+  Polyline,
+  Popup,
+  TileLayer,
+} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 type DistanceUnit = 'KM' | 'MI';
 type DataMode = 'OFFLINE' | 'ONLINE';
+type MapTheme = 'light' | 'dark';
 
 type StationProfile = {
   operatorName: string;
@@ -37,6 +45,7 @@ type RDILiveMapProps = {
   mapConnected?: boolean;
   stationProfile?: Partial<StationProfile>;
   clusterSpots?: MapStation[];
+  mapTheme?: MapTheme;
 };
 
 type BridgeSpotsResponse = {
@@ -47,7 +56,11 @@ type BridgeSpotsResponse = {
   error?: string;
 };
 
+type LatLngTuple = [number, number];
+
 const BRIDGE_BASE_URL = 'http://localhost:8787';
+const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY ?? '';
+const MAP_THEME_STORAGE_KEY = 'rdi-map-theme';
 
 const defaultStationProfile: StationProfile = {
   operatorName: 'Fred',
@@ -251,11 +264,32 @@ function formatBridgeTime(value: string | null) {
   return `${date.toUTCString().split(' ')[4]} UTC`;
 }
 
+function buildOpenWeatherTileUrl(layer: string) {
+  return `https://tile.openweathermap.org/map/${layer}/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`;
+}
+
+function getStoredMapTheme(): MapTheme {
+  if (typeof window === 'undefined') return 'light';
+  const stored = window.localStorage.getItem(MAP_THEME_STORAGE_KEY);
+  return stored === 'dark' ? 'dark' : 'light';
+}
+
+function getBaseMapUrl(mapTheme: MapTheme) {
+  return mapTheme === 'dark'
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+}
+
+function getMapBackground(mapTheme: MapTheme) {
+  return mapTheme === 'dark' ? '#111827' : '#dbe4ef';
+}
+
 export default function RDILiveMap({
   dataMode = 'OFFLINE',
   mapConnected = true,
   stationProfile,
   clusterSpots,
+  mapTheme,
 }: RDILiveMapProps) {
   const [selectedCallsign, setSelectedCallsign] = useState<string | null>(null);
   const [bridgeSpots, setBridgeSpots] = useState<MapStation[]>([]);
@@ -263,6 +297,30 @@ export default function RDILiveMap({
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  const [showLiveActivity, setShowLiveActivity] = useState(true);
+  const [showPropagationLayer, setShowPropagationLayer] = useState(false);
+  const [showWeatherLayer, setShowWeatherLayer] = useState(false);
+  const [storedMapTheme, setStoredMapTheme] = useState<MapTheme>(() => getStoredMapTheme());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const refreshTheme = () => {
+      setStoredMapTheme(getStoredMapTheme());
+    };
+
+    refreshTheme();
+    window.addEventListener('storage', refreshTheme);
+    window.addEventListener('focus', refreshTheme);
+
+    return () => {
+      window.removeEventListener('storage', refreshTheme);
+      window.removeEventListener('focus', refreshTheme);
+    };
+  }, []);
+
+  const activeMapTheme = mapTheme ?? storedMapTheme;
 
   const currentStation: StationProfile = {
     ...defaultStationProfile,
@@ -273,7 +331,15 @@ export default function RDILiveMap({
     distanceUnit: stationProfile?.distanceUnit || defaultStationProfile.distanceUnit,
   };
 
-  const myCoords = useMemo(() => maidenheadToLatLon(currentStation.gridSquare), [currentStation.gridSquare]);
+  const normalizedGrid = useMemo(
+    () => normalizeGridSquare(currentStation.gridSquare),
+    [currentStation.gridSquare]
+  );
+
+  const myCoords = useMemo(
+    () => maidenheadToLatLon(currentStation.gridSquare),
+    [currentStation.gridSquare]
+  );
 
   const fetchBridgeSpots = async () => {
     if (dataMode !== 'ONLINE' || !mapConnected || clusterSpots) return;
@@ -384,6 +450,19 @@ export default function RDILiveMap({
     return 'Offline mode • Local station data';
   }, [bridgeConnected, dataMode, fetchError, isLoading, lastUpdated, mapConnected]);
 
+  const propagationCircles = useMemo(() => {
+    return [
+      { center: [50, 14] as LatLngTuple, radius: 2100000, color: '#22c55e', opacity: 0.16 },
+      { center: [47, -10] as LatLngTuple, radius: 1800000, color: '#22c55e', opacity: 0.12 },
+      { center: [25, -78] as LatLngTuple, radius: 1300000, color: '#eab308', opacity: 0.14 },
+      { center: [39, -92] as LatLngTuple, radius: 1900000, color: '#ef4444', opacity: 0.10 },
+      { center: [14, 20] as LatLngTuple, radius: 1700000, color: '#ef4444', opacity: 0.08 },
+      { center: [43, -58] as LatLngTuple, radius: 1400000, color: '#eab308', opacity: 0.10 },
+    ];
+  }, []);
+
+  const hasWeatherApiKey = OPENWEATHER_API_KEY.trim().length > 0;
+
   if (!myCoords) {
     return (
       <section style={panelStyle}>
@@ -398,10 +477,17 @@ export default function RDILiveMap({
       <div style={headerRowStyle}>
         <div>
           <h2 style={titleStyle}>RDI Live Map</h2>
-          <p style={subTitleStyle}>Click a station for rotor heading and distance</p>
+          <p style={subTitleStyle}>Click spot for rotor heading</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {showLiveActivity && (
+            <div style={clusterDxBadgeStyle}>
+              <span style={{ ...legendDotStyle, background: '#22c55e' }} />
+              ClusterDX spot
+            </div>
+          )}
+
           <div style={sourceBadgeStyle}>{sourceSummary}</div>
 
           {dataMode === 'ONLINE' && (
@@ -417,120 +503,135 @@ export default function RDILiveMap({
         </div>
       </div>
 
-      <div style={mapWrapStyle}>
+      <div style={{ ...mapWrapStyle, background: getMapBackground(activeMapTheme) }}>
         <MapContainer
-          center={[20, 0]}
-          zoom={2}
+          center={[42, -75]}
+          zoom={3}
+          minZoom={2}
           scrollWheelZoom={true}
-          style={{ height: '580px', width: '100%' }}
+          style={{ height: '600px', width: '100%' }}
         >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap contributors &copy; CARTO"
+            url={getBaseMapUrl(activeMapTheme)}
           />
 
-          {plottedStations.map(({ station, coords, lineFrom }) => (
-            <Polyline
-              key={`line-${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
-              positions={[
-                [lineFrom.lat, lineFrom.lon],
-                [coords.lat, coords.lon],
-              ]}
-              pathOptions={{
-                color:
-                  station.source === 'CLUSTERDX'
-                    ? 'rgba(34,197,94,0.6)'
-                    : station.isActive
-                      ? '#4da3ff'
-                      : 'rgba(77,163,255,0.45)',
-                weight: station.isActive ? 2 : 1,
-              }}
+          {showPropagationLayer &&
+            propagationCircles.map((region, index) => (
+              <Circle
+                key={`prop-${index}`}
+                center={region.center}
+                radius={region.radius}
+                pathOptions={{
+                  color: region.color,
+                  weight: 0,
+                  fillColor: region.color,
+                  fillOpacity: region.opacity,
+                }}
+              />
+            ))}
+
+          {showWeatherLayer && hasWeatherApiKey && (
+            <TileLayer
+              url={buildOpenWeatherTileUrl('precipitation_new')}
+              opacity={0.82}
+              zIndex={350}
             />
-          ))}
+          )}
 
-          <CircleMarker
-            center={[myCoords.lat, myCoords.lon]}
-            radius={8}
-            pathOptions={{
-              color: '#ffffff',
-              weight: 2,
-              fillColor: '#ff5d5d',
-              fillOpacity: 1,
-            }}
-          >
-            <Popup>
-              <div style={popupContentStyle}>
-                <div style={popupCallsignStyle}>📍 {currentStation.callsign}</div>
-                <div><strong>Operator:</strong> {currentStation.operatorName}</div>
-                <div><strong>Grid:</strong> {currentStation.gridSquare}</div>
-                <div><strong>Station:</strong> Your location</div>
-              </div>
-            </Popup>
-          </CircleMarker>
+          {showLiveActivity &&
+            plottedStations.map(({ station, coords, lineFrom }) => (
+              <Polyline
+                key={`line-${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
+                positions={[
+                  [lineFrom.lat, lineFrom.lon],
+                  [coords.lat, coords.lon],
+                ]}
+                pathOptions={{
+                  color:
+                    station.source === 'CLUSTERDX'
+                      ? 'rgba(34,197,94,0.72)'
+                      : station.isActive
+                        ? '#3b82f6'
+                        : 'rgba(59,130,246,0.5)',
+                  weight: station.isActive ? 2 : 1,
+                }}
+              />
+            ))}
 
-          {plottedStations.map(({ station, coords, distance, bearing, compass }) => (
+          {showLiveActivity && (
             <CircleMarker
-              key={`${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
-              center={[coords.lat, coords.lon]}
-              radius={station.isActive ? 8 : 6}
-              eventHandlers={{
-                click: () => setSelectedCallsign(station.callsign),
-              }}
+              center={[myCoords.lat, myCoords.lon]}
+              radius={8}
               pathOptions={{
                 color: '#ffffff',
                 weight: 2,
-                fillColor: getMarkerColor(station),
-                fillOpacity: 0.95,
+                fillColor: '#ff5d5d',
+                fillOpacity: 1,
               }}
             >
               <Popup>
                 <div style={popupContentStyle}>
-                  <div style={popupCallsignStyle}>
-                    {getPrefixFlag(station.callsign)} {station.callsign}
-                  </div>
-                  <div><strong>Operator:</strong> {station.operatorName ?? 'Unknown'}</div>
-                  <div><strong>Country:</strong> {station.country ?? 'Unknown'}</div>
-                  <div><strong>Target grid:</strong> {station.gridSquare}</div>
-                  <div><strong>Your grid:</strong> {currentStation.gridSquare}</div>
-                  <div><strong>Source:</strong> {getSourceLabel(station)}</div>
-                  {station.frequency && <div><strong>Frequency:</strong> {station.frequency}</div>}
-                  {station.mode && <div><strong>Mode:</strong> {station.mode}</div>}
-                  {station.utcTime && <div><strong>UTC:</strong> {station.utcTime}</div>}
-                  <hr style={ruleStyle} />
-                  <div><strong>Distance:</strong> {formatDistance(distance, currentStation.distanceUnit)}</div>
-                  <div><strong>Bearing:</strong> {Math.round(bearing)}°</div>
-                  <div><strong>Direction:</strong> {compass}</div>
-                  <div style={rotorTextStyle}>
-                    Turn rotor to {Math.round(bearing)}°
-                  </div>
+                  <div style={popupCallsignStyle}>📍 {currentStation.callsign}</div>
+                  <div><strong>Operator:</strong> {currentStation.operatorName}</div>
+                  <div><strong>Grid:</strong> {normalizedGrid}</div>
+                  <div><strong>Station:</strong> Your location</div>
                 </div>
               </Popup>
             </CircleMarker>
-          ))}
+          )}
+
+          {showLiveActivity &&
+            plottedStations.map(({ station, coords, distance, bearing, compass }) => (
+              <CircleMarker
+                key={`${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
+                center={[coords.lat, coords.lon]}
+                radius={station.isActive ? 8 : 6}
+                eventHandlers={{
+                  click: () => setSelectedCallsign(station.callsign),
+                }}
+                pathOptions={{
+                  color: '#ffffff',
+                  weight: 2,
+                  fillColor: getMarkerColor(station),
+                  fillOpacity: 0.95,
+                }}
+              >
+                <Popup>
+                  <div style={popupContentStyle}>
+                    <div style={popupCallsignStyle}>
+                      {getPrefixFlag(station.callsign)} {station.callsign}
+                    </div>
+                    <div><strong>Operator:</strong> {station.operatorName ?? 'Unknown'}</div>
+                    <div><strong>Country:</strong> {station.country ?? 'Unknown'}</div>
+                    <div><strong>Target grid:</strong> {station.gridSquare}</div>
+                    <div><strong>Your grid:</strong> {normalizedGrid}</div>
+                    <div><strong>Source:</strong> {getSourceLabel(station)}</div>
+                    {station.frequency && <div><strong>Frequency:</strong> {station.frequency}</div>}
+                    {station.mode && <div><strong>Mode:</strong> {station.mode}</div>}
+                    {station.utcTime && <div><strong>UTC:</strong> {station.utcTime}</div>}
+                    <hr style={ruleStyle} />
+                    <div><strong>Distance:</strong> {formatDistance(distance, currentStation.distanceUnit)}</div>
+                    <div><strong>Bearing:</strong> {Math.round(bearing)}°</div>
+                    <div><strong>Direction:</strong> {compass}</div>
+                    <div style={rotorTextStyle}>
+                      Turn rotor to {Math.round(bearing)}°
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            ))}
         </MapContainer>
 
-        <div style={legendStyle}>
-          <span style={legendItemStyle}>
-            <span style={{ ...legendDotStyle, background: '#ff5d5d' }} />
-            Your station
-          </span>
-          <span style={legendItemStyle}>
-            <span style={{ ...legendDotStyle, background: '#4da3ff' }} />
-            RDI member
-          </span>
-          <span style={legendItemStyle}>
-            <span style={{ ...legendDotStyle, background: '#f5b301' }} />
-            Active RDI
-          </span>
-          <span style={legendItemStyle}>
-            <span style={{ ...legendDotStyle, background: '#22c55e' }} />
-            ClusterDX spot
-          </span>
-        </div>
-
-        {selectedCallsign && (
+        {selectedCallsign && showLiveActivity && (
           <div style={statusStyle}>
             Selected: <strong>{selectedCallsign}</strong>
+          </div>
+        )}
+
+        {showWeatherLayer && !hasWeatherApiKey && (
+          <div style={weatherOverlayNoticeStyle}>
+            Add <strong>VITE_OPENWEATHER_API_KEY</strong> to your .env file to enable live weather tiles.
           </div>
         )}
 
@@ -540,11 +641,91 @@ export default function RDILiveMap({
           </div>
         )}
 
-        {dataMode === 'ONLINE' && !fetchError && plottedStations.length === 0 && !isLoading && (
+        {dataMode === 'ONLINE' && !fetchError && plottedStations.length === 0 && !isLoading && showLiveActivity && (
           <div style={offlineOverlayStyle}>
             No live spots were returned yet. Use Refresh after logging in to the bridge.
           </div>
         )}
+      </div>
+
+      <div style={layerBarStyle}>
+        <div style={layerTopRowStyle}>
+          <label style={layerChipStyle}>
+            <input
+              type="checkbox"
+              checked={showLiveActivity}
+              onChange={(event) => setShowLiveActivity(event.target.checked)}
+            />
+            <span>Live 11m Activity</span>
+          </label>
+
+          <label style={layerChipStyle}>
+            <input
+              type="checkbox"
+              checked={showPropagationLayer}
+              onChange={(event) => setShowPropagationLayer(event.target.checked)}
+            />
+            <span>11m Propagation Strength</span>
+          </label>
+
+          <label style={layerChipStyle}>
+            <input
+              type="checkbox"
+              checked={showWeatherLayer}
+              onChange={(event) => setShowWeatherLayer(event.target.checked)}
+            />
+            <span>Weather / Safety</span>
+          </label>
+        </div>
+
+        <div style={layerBottomRowStyle}>
+          <div style={layerGroupStyle}>
+            {showLiveActivity ? (
+              <div style={layerGroupItemsStyle}>
+                <span style={layerKeyItemStyle}>
+                  <span style={{ ...layerKeySwatchStyle, background: '#ff5d5d' }} />
+                  Your station
+                </span>
+                <span style={layerKeyItemStyle}>
+                  <span style={{ ...layerKeySwatchStyle, background: '#4da3ff' }} />
+                  RDI member
+                </span>
+                <span style={layerKeyItemStyle}>
+                  <span style={{ ...layerKeySwatchStyle, background: '#f5b301' }} />
+                  Active RDI
+                </span>
+              </div>
+            ) : (
+              <div />
+            )}
+          </div>
+
+          <div style={layerGroupStyle}>
+            <div style={layerGroupItemsStyle}>
+              <span style={layerKeyItemStyle}>
+                <span style={{ ...layerKeySwatchStyle, background: 'rgba(34,197,94,0.85)' }} />
+                Open
+              </span>
+              <span style={layerKeyItemStyle}>
+                <span style={{ ...layerKeySwatchStyle, background: 'rgba(234,179,8,0.85)' }} />
+                Fair
+              </span>
+              <span style={layerKeyItemStyle}>
+                <span style={{ ...layerKeySwatchStyle, background: 'rgba(239,68,68,0.85)' }} />
+                Weak
+              </span>
+            </div>
+          </div>
+
+          <div style={layerGroupStyle}>
+            <div style={layerGroupItemsStyle}>
+              <span style={layerKeyItemStyle}>
+                <span style={{ ...layerKeySwatchStyle, background: 'rgba(59,130,246,0.95)' }} />
+                Rain
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -592,6 +773,20 @@ const sourceBadgeStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+const clusterDxBadgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.4rem',
+  background: 'rgba(22,101,52,0.18)',
+  color: '#dcfce7',
+  border: '1px solid rgba(74,222,128,0.32)',
+  borderRadius: '999px',
+  padding: '0.45rem 0.75rem',
+  fontSize: '0.78rem',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+};
+
 const refreshButtonStyle: CSSProperties = {
   background: 'rgba(70, 130, 220, 0.18)',
   color: '#dce9ff',
@@ -605,32 +800,81 @@ const refreshButtonStyle: CSSProperties = {
 
 const mapWrapStyle: CSSProperties = {
   position: 'relative',
-  minHeight: '580px',
+  minHeight: '600px',
   borderRadius: '16px',
   overflow: 'hidden',
-  background: '#bcd7e8',
+  background: '#dbe4ef',
 };
 
-const legendStyle: CSSProperties = {
-  position: 'absolute',
-  left: '12px',
-  bottom: '12px',
-  display: 'flex',
-  gap: '0.65rem',
-  flexWrap: 'wrap',
-  background: 'rgba(15,23,42,0.82)',
-  border: '1px solid rgba(148,163,184,0.25)',
+const layerBarStyle: CSSProperties = {
+  marginTop: '0.35rem',
   borderRadius: '12px',
-  padding: '0.55rem 0.7rem',
+  background: 'rgba(15,23,42,0.72)',
+  border: '1px solid rgba(148,163,184,0.18)',
+  padding: '0.42rem 0.75rem 0.55rem',
   color: '#e5eef7',
-  fontSize: '0.78rem',
-  zIndex: 500,
 };
 
-const legendItemStyle: CSSProperties = {
+const layerTopRowStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: '0.7rem',
+  alignItems: 'center',
+};
+
+const layerBottomRowStyle: CSSProperties = {
+  marginTop: '0.35rem',
+  paddingTop: '0.38rem',
+  borderTop: '1px solid rgba(148,163,184,0.12)',
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: '0.7rem',
+  alignItems: 'start',
+};
+
+const layerChipStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '0.4rem',
+  justifyContent: 'center',
+  gap: '0.45rem',
+  background: 'rgba(30,41,59,0.9)',
+  border: '1px solid rgba(96,165,250,0.2)',
+  borderRadius: '999px',
+  padding: '0.48rem 0.7rem',
+  fontSize: '0.78rem',
+  fontWeight: 700,
+  color: '#e5eef7',
+  whiteSpace: 'nowrap',
+};
+
+const layerGroupStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  minHeight: '22px',
+};
+
+const layerGroupItemsStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.65rem',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '0.75rem',
+  color: '#cbd5e1',
+  textAlign: 'center',
+};
+
+const layerKeyItemStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.35rem',
+};
+
+const layerKeySwatchStyle: CSSProperties = {
+  width: '12px',
+  height: '12px',
+  borderRadius: '999px',
+  display: 'inline-block',
 };
 
 const legendDotStyle: CSSProperties = {
@@ -649,6 +893,20 @@ const statusStyle: CSSProperties = {
   padding: '0.5rem 0.75rem',
   borderRadius: '10px',
   border: '1px solid rgba(148,163,184,0.25)',
+  fontSize: '0.82rem',
+  zIndex: 500,
+};
+
+const weatherOverlayNoticeStyle: CSSProperties = {
+  position: 'absolute',
+  left: '12px',
+  right: '12px',
+  bottom: '12px',
+  background: 'rgba(15,23,42,0.86)',
+  color: '#f8fafc',
+  padding: '0.65rem 0.85rem',
+  borderRadius: '10px',
+  border: '1px solid rgba(96,165,250,0.35)',
   fontSize: '0.82rem',
   zIndex: 500,
 };

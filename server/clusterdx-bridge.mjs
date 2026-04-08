@@ -9,10 +9,19 @@ import * as cheerio from 'cheerio';
 dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-const PORT = Number(process.env.CLUSTERDX_BRIDGE_PORT || 8787);
+const PORT = Number(process.env.PORT || process.env.CLUSTERDX_BRIDGE_PORT || 8787);
+
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+  }),
+);
+
+app.use(express.json());
 
 const CLUSTERDX_BASE_URL = process.env.CLUSTERDX_BASE_URL || 'https://clusterdx.org';
 const CLUSTERDX_LOGIN_URL =
@@ -20,6 +29,7 @@ const CLUSTERDX_LOGIN_URL =
 
 const CLUSTERDX_SPOTS_URL =
   process.env.CLUSTERDX_SPOTS_URL || `${CLUSTERDX_BASE_URL}/spots.php`;
+
 const CLUSTERDX_LIVE_CLUSTER_URL =
   process.env.CLUSTERDX_LIVE_CLUSTER_URL ||
   `${CLUSTERDX_BASE_URL}/New_ClusterDX/fetch_cluster_data.php`;
@@ -31,6 +41,7 @@ const DXPROOF_PROPAGATION_URL =
 const DEFAULT_LOAD_SIZE = Number(process.env.CLUSTERDX_DEFAULT_LOAD_SIZE || 25);
 
 const jar = new CookieJar();
+
 const client = wrapper(
   axios.create({
     jar,
@@ -135,6 +146,7 @@ function parseJsonSpots(payload, loadSize = DEFAULT_LOAD_SIZE) {
       const submitter = item.SUBMITTER || item.operatorName || item.operator || item.name;
       const submitterGrid = item.loc_SUBMITTER || '';
       const frequencyRaw = String(item.FREQUENCY || item.frequency || item.freq || '').trim();
+
       const frequency =
         frequencyRaw && /^\d+$/.test(frequencyRaw)
           ? `${frequencyRaw.slice(0, 2)}.${frequencyRaw.slice(2)}`
@@ -155,6 +167,7 @@ function parseJsonSpots(payload, loadSize = DEFAULT_LOAD_SIZE) {
     .filter(Boolean);
 
   const seen = new Set();
+
   const deduped = results.filter((item) => {
     const key = `${item.callsign}|${item.utcTime || ''}|${item.frequency || ''}`;
     if (seen.has(key)) return false;
@@ -235,9 +248,7 @@ async function fetchLoginPage() {
   const html = typeof response.data === 'string' ? response.data : '';
   const $ = cheerio.load(html);
 
-  const csrfToken =
-    $('input[name="csrf_token"]').attr('value') || '';
-
+  const csrfToken = $('input[name="csrf_token"]').attr('value') || '';
   const hpField = $('input[name="hp_field"]').attr('value') || '';
 
   return {
@@ -317,9 +328,7 @@ async function loginToClusterDx({
   return true;
 }
 
-async function fetchClusterDxSpots({
-  loadSize = DEFAULT_LOAD_SIZE,
-}) {
+async function fetchClusterDxSpots({ loadSize = DEFAULT_LOAD_SIZE }) {
   authState.lastError = null;
 
   const liveUrl = new URL(CLUSTERDX_LIVE_CLUSTER_URL);
@@ -343,6 +352,25 @@ async function fetchClusterDxSpots({
 
   return [];
 }
+
+app.get('/', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'RDI Log Plus ClusterDX Bridge',
+    loggedIn: authState.loggedIn,
+  });
+});
+
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'RDI Log Plus ClusterDX Bridge',
+    loggedIn: authState.loggedIn,
+    lastLoginAt: authState.lastLoginAt,
+    lastFetchAt: authState.lastFetchAt,
+    lastError: authState.lastError,
+  });
+});
 
 app.get('/api/status', async (_req, res) => {
   res.json({
@@ -389,13 +417,13 @@ app.post('/api/login', async (req, res) => {
 
     await loginToClusterDx({ username, password, rememberMe });
 
-    res.json({
+    return res.json({
       ok: true,
       loggedIn: true,
       lastLoginAt: authState.lastLoginAt,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Login failed.',
     });
@@ -415,7 +443,7 @@ app.get('/api/spots', async (req, res) => {
 
     const spots = await fetchClusterDxSpots({ loadSize });
 
-    res.json({
+    return res.json({
       ok: true,
       count: spots.length,
       loadSize,
@@ -424,7 +452,8 @@ app.get('/api/spots', async (req, res) => {
     });
   } catch (error) {
     authState.lastError = error instanceof Error ? error.message : 'Fetch failed.';
-    res.status(500).json({
+
+    return res.status(500).json({
       ok: false,
       error: authState.lastError,
     });
@@ -447,9 +476,9 @@ app.post('/api/logout', async (_req, res) => {
       lastError: null,
     };
 
-    res.json({ ok: true, loggedIn: false });
+    return res.json({ ok: true, loggedIn: false });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Logout failed.',
     });
@@ -457,7 +486,8 @@ app.post('/api/logout', async (_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`ClusterDX bridge running on http://localhost:${PORT}`);
+  console.log(`ClusterDX bridge running on port ${PORT}`);
+  console.log(`Allowed frontend origin: ${FRONTEND_ORIGIN}`);
   console.log(`Login URL: ${CLUSTERDX_LOGIN_URL}`);
   console.log(`Spots URL: ${CLUSTERDX_SPOTS_URL}`);
   console.log(`Propagation URL: ${DXPROOF_PROPAGATION_URL}`);
