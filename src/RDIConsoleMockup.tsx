@@ -143,7 +143,7 @@ type RDIConsoleMockupProps = {
 
 type SortField = 'callsign' | 'date' | 'time' | 'frequency' | 'mode';
 
-const BRIDGE_BASE_URL = 'http://localhost:8787';
+const BRIDGE_BASE_URL = 'https://rdi-log-plus-bridge.onrender.com';
 const SUPABASE_URL = 'https://axhpjwqvdtjeyqyiqoyg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_6hEILqgZS51Q7Bk5OiusKw_BcsDHq07';
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
