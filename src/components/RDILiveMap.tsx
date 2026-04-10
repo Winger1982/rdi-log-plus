@@ -58,7 +58,7 @@ type BridgeSpotsResponse = {
 
 type LatLngTuple = [number, number];
 
-const BRIDGE_BASE_URL = 'http://localhost:8787';
+const BRIDGE_BASE_URL = 'https://rdi-log-plus-bridge.onrender.com';
 const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY ?? '';
 const MAP_THEME_STORAGE_KEY = 'rdi-map-theme';
 

@@ -124,6 +124,13 @@ type AuthProfile = {
   approved: boolean;
 };
 
+type SetupDraftSnapshot = {
+  profileDraft: StationProfile;
+  clusterDraft: ClusterSettings;
+};
+
+type RecoveryMode = 'NONE' | 'PASSWORD_RECOVERY';
+
 type RDIConsoleMockupProps = {
   activeLogbook: Logbook | null;
   logbooks: Logbook[];
@@ -148,6 +155,7 @@ const SUPABASE_URL = 'https://axhpjwqvdtjeyqyiqoyg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_6hEILqgZS51Q7Bk5OiusKw_BcsDHq07';
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
 const CLUSTER_STORAGE_KEY = 'rdi.console.cluster';
+const SETUP_DRAFT_STORAGE_KEY = 'rdi.console.setupDraft';
 const WELCOME_OVERLAY_STORAGE_KEY = 'rdi.console.hideWelcomeOverlay';
 const COORDINATE_HELP_URL = 'https://gps-coordinates.org/';
 const RDI_LOGO_SRC = '/rdi-logo.png';
@@ -412,6 +420,10 @@ export default function RDIConsoleMockup({
   const [authProfile, setAuthProfile] = useState<AuthProfile | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [hasLoggedAppOpen, setHasLoggedAppOpen] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>('NONE');
+  const [recoveryPassword, setRecoveryPassword] = useState('');
+  const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('');
+  const [recoveryMessage, setRecoveryMessage] = useState('');
 
   const [profile, setProfile] = useState<StationProfile>(() => {
     if (typeof window === 'undefined') return DEFAULT_PROFILE;
@@ -423,7 +435,17 @@ export default function RDIConsoleMockup({
     }
   });
 
-  const [profileDraft, setProfileDraft] = useState<StationProfile>(profile);
+    const [profileDraft, setProfileDraft] = useState<StationProfile>(() => {
+    if (typeof window === 'undefined') return profile;
+    try {
+      const savedDraft = window.localStorage.getItem(SETUP_DRAFT_STORAGE_KEY);
+      if (!savedDraft) return profile;
+      const parsed = JSON.parse(savedDraft) as Partial<SetupDraftSnapshot>;
+      return parsed.profileDraft ? { ...profile, ...parsed.profileDraft } : profile;
+    } catch {
+      return profile;
+    }
+  });
 
   const [clusterSettings, setClusterSettings] = useState<ClusterSettings>(() => {
     if (typeof window === 'undefined') return DEFAULT_CLUSTER_SETTINGS;
@@ -435,7 +457,17 @@ export default function RDIConsoleMockup({
     }
   });
 
-  const [clusterDraft, setClusterDraft] = useState<ClusterSettings>(clusterSettings);
+    const [clusterDraft, setClusterDraft] = useState<ClusterSettings>(() => {
+    if (typeof window === 'undefined') return clusterSettings;
+    try {
+      const savedDraft = window.localStorage.getItem(SETUP_DRAFT_STORAGE_KEY);
+      if (!savedDraft) return clusterSettings;
+      const parsed = JSON.parse(savedDraft) as Partial<SetupDraftSnapshot>;
+      return parsed.clusterDraft ? { ...clusterSettings, ...parsed.clusterDraft } : clusterSettings;
+    } catch {
+      return clusterSettings;
+    }
+  });
 
   const [clusterState, setClusterState] = useState<ClusterLoginState>('DISCONNECTED');
   const [clusterMessage, setClusterMessage] = useState('ClusterDX is not connected.');
@@ -537,24 +569,57 @@ export default function RDIConsoleMockup({
         setAuthLoading(false);
       }
     };
+        const {
+  data: { subscription },
+} = supabase.auth.onAuthStateChange((event, session) => {
+  const nextUser = session?.user ?? null;
+  setAuthUser(nextUser);
+  setHasLoggedAppOpen(false);
 
-    void bootstrap();
+  if (event === 'PASSWORD_RECOVERY') {
+  window.sessionStorage.setItem('rdi.passwordRecovery', 'true');
+  setShowWelcomeOverlay(false);
+  setRecoveryMode('PASSWORD_RECOVERY');
+  setAuthLoading(false);
+  return;
+}
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const nextUser = session?.user ?? null;
-      setAuthUser(nextUser);
-      setHasLoggedAppOpen(false);
+  if (event === 'SIGNED_OUT') {
+  window.sessionStorage.removeItem('rdi.passwordRecovery');
+  setRecoveryMode('NONE');
+  setRecoveryPassword('');
+  setRecoveryPasswordConfirm('');
+  setRecoveryMessage('');
+}
 
-      if (nextUser) {
-        setAuthLoading(true);
-        void loadAuthProfile(nextUser.id);
-      } else {
-        setAuthProfile(null);
-        setAuthLoading(false);
-      }
-    });
+  if (nextUser) {
+    setAuthLoading(true);
+    void loadAuthProfile(nextUser.id);
+  } else {
+    setAuthProfile(null);
+    setAuthLoading(false);
+  }
+});
+
+if (typeof window !== 'undefined') {
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+  const recoveryLink =
+    hash.includes('type=recovery') ||
+    search.includes('type=recovery') ||
+    search.includes('token_hash=') ||
+    hash.includes('access_token=');
+
+  const storedRecovery = window.sessionStorage.getItem('rdi.passwordRecovery') === 'true';
+
+  if (recoveryLink || storedRecovery) {
+    setShowWelcomeOverlay(false);
+    setRecoveryMode('PASSWORD_RECOVERY');
+    setAuthLoading(false);
+  }
+}
+
+void bootstrap();
 
     return () => {
       active = false;
@@ -581,11 +646,7 @@ export default function RDIConsoleMockup({
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    setProfileDraft(profile);
-  }, [profile]);
-
-  useEffect(() => {
+    useEffect(() => {
     try {
       window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     } catch {
@@ -593,9 +654,19 @@ export default function RDIConsoleMockup({
     }
   }, [profile]);
 
-  useEffect(() => {
-    setClusterDraft(clusterSettings);
-  }, [clusterSettings]);
+       useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        SETUP_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          profileDraft,
+          clusterDraft,
+        } satisfies SetupDraftSnapshot),
+      );
+    } catch {
+      // ignore draft save failures
+    }
+  }, [profileDraft, clusterDraft]);
 
   useEffect(() => {
     if (!saveMessage) return;
@@ -1156,15 +1227,17 @@ export default function RDIConsoleMockup({
       const response = await fetch(`${BRIDGE_BASE_URL}/api/status`);
       const payload = (await response.json()) as ClusterStatusPayload;
       if (!response.ok) {
-        setClusterState('ERROR');
-        setClusterMessage('Unable to read ClusterDX bridge status.');
-        return;
-      }
-      applyStatusPayload(payload);
-    } catch {
-      setClusterState('ERROR');
-      setClusterMessage('Unable to reach the ClusterDX bridge.');
-    }
+  setClusterState('ERROR');
+  setClusterMessage('Unable to read ClusterDX bridge status.');
+  setClusterLastError('Unable to read ClusterDX bridge status.');
+  return;
+}
+applyStatusPayload(payload);
+} catch {
+  setClusterState('ERROR');
+  setClusterMessage('Unable to reach the ClusterDX bridge.');
+  setClusterLastError('Unable to reach the ClusterDX bridge.');
+}
   }, [applyStatusPayload]);
 
   const connectCluster = useCallback(async () => {
@@ -1321,8 +1394,11 @@ export default function RDIConsoleMockup({
     try {
       window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cleanedProfile));
       window.localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(cleanedCluster));
+      window.localStorage.removeItem(SETUP_DRAFT_STORAGE_KEY);
       setProfile(cleanedProfile);
       setClusterSettings(cleanedCluster);
+      setProfileDraft(cleanedProfile);
+      setClusterDraft(cleanedCluster);
 
       const nowLabel = new Date().toLocaleTimeString([], {
         hour: '2-digit',
@@ -1342,9 +1418,7 @@ export default function RDIConsoleMockup({
     void fetchWeather(cleanedProfile.latitude, cleanedProfile.longitude);
   };
 
-  const cancelSetupChanges = () => {
-    setProfileDraft(profile);
-    setClusterDraft(clusterSettings);
+   const cancelSetupChanges = () => {
     setSaveMessage('');
     setShowSetup(false);
   };
@@ -1465,6 +1539,54 @@ export default function RDIConsoleMockup({
 
     setAuthBusy(false);
   };
+   
+     const handleCompletePasswordRecovery = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!supabase) {
+      setAuthError('Supabase is not configured.');
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError('');
+    setRecoveryMessage('');
+
+    if (!recoveryPassword.trim()) {
+      setAuthError('Enter a new password.');
+      setAuthBusy(false);
+      return;
+    }
+
+    if (recoveryPassword.length < 6) {
+      setAuthError('New password must be at least 6 characters.');
+      setAuthBusy(false);
+      return;
+    }
+
+    if (recoveryPassword !== recoveryPasswordConfirm) {
+      setAuthError('Passwords do not match.');
+      setAuthBusy(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: recoveryPassword,
+    });
+
+    if (error) {
+      setAuthError(error.message || 'Unable to update password.');
+      setAuthBusy(false);
+      return;
+    }
+    
+    window.sessionStorage.removeItem('rdi.passwordRecovery');
+
+    setRecoveryMessage('Password updated successfully. You can now use your new password.');
+    setRecoveryPassword('');
+    setRecoveryPasswordConfirm('');
+    setRecoveryMode('NONE');
+    setAuthBusy(false);
+    };
 
   const handleSignOut = async () => {
     if (!supabase) return;
@@ -1536,6 +1658,88 @@ export default function RDIConsoleMockup({
     );
   }
 
+    if (recoveryMode === 'PASSWORD_RECOVERY') {
+  return (
+    <div style={shellStyle}>
+      <form
+        onSubmit={handleCompletePasswordRecovery}
+        style={{
+          maxWidth: '520px',
+          margin: '7vh auto 0',
+          ...panelStyle,
+          display: 'grid',
+          gap: '14px',
+        }}
+      >
+        <div style={{ display: 'grid', gap: '4px' }}>
+          <div style={{ fontSize: '1.55rem', fontWeight: 800 }}>Set Your New Password</div>
+          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+            Your reset link has been accepted. Choose a new password to finish recovery.
+          </div>
+        </div>
+
+        <div>
+          <div style={labelStyle}>New Password</div>
+          <input
+            type="password"
+            value={recoveryPassword}
+            onChange={(event) => setRecoveryPassword(event.target.value)}
+            style={inputStyle}
+            autoComplete="new-password"
+            required
+          />
+        </div>
+
+        <div>
+          <div style={labelStyle}>Confirm New Password</div>
+          <input
+            type="password"
+            value={recoveryPasswordConfirm}
+            onChange={(event) => setRecoveryPasswordConfirm(event.target.value)}
+            style={inputStyle}
+            autoComplete="new-password"
+            required
+          />
+        </div>
+
+        {authError && <div>{authError}</div>}
+        {recoveryMessage && <div>{recoveryMessage}</div>}
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
+            {authBusy ? 'Saving…' : 'Save New Password'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+          {recoveryMessage && (
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'rgba(22, 163, 74, 0.18)',
+                border: '1px solid rgba(74, 222, 128, 0.45)',
+                color: '#ecfdf5',
+                fontWeight: 700,
+              }}
+            >
+              {recoveryMessage}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
+              {authBusy ? 'Saving…' : 'Save New Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   if (!authUser) {
     return (
       <div style={shellStyle}>
@@ -1558,16 +1762,39 @@ export default function RDIConsoleMockup({
 
           <div>
             <div style={labelStyle}>Email</div>
-            <input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} style={inputStyle} autoComplete="email" required />
+            <input
+              type="email"
+              value={authEmail}
+              onChange={(event) => setAuthEmail(event.target.value)}
+              style={inputStyle}
+              autoComplete="email"
+              required
+            />
           </div>
 
           <div>
             <div style={labelStyle}>Password</div>
-            <input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} style={inputStyle} autoComplete="current-password" required />
+            <input
+              type="password"
+              value={authPassword}
+              onChange={(event) => setAuthPassword(event.target.value)}
+              style={inputStyle}
+              autoComplete="current-password"
+              required
+            />
           </div>
 
           {authError && (
-            <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(185, 28, 28, 0.18)', border: '1px solid rgba(248, 113, 113, 0.45)', color: '#fee2e2', fontWeight: 700 }}>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'rgba(185, 28, 28, 0.18)',
+                border: '1px solid rgba(248, 113, 113, 0.45)',
+                color: '#fee2e2',
+                fontWeight: 700,
+              }}
+            >
               {authError}
             </div>
           )}
