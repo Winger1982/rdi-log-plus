@@ -1715,31 +1715,6 @@ applyStatusPayload(payload);
   );
 }
 
-          {recoveryMessage && (
-            <div
-              style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                background: 'rgba(22, 163, 74, 0.18)',
-                border: '1px solid rgba(74, 222, 128, 0.45)',
-                color: '#ecfdf5',
-                fontWeight: 700,
-              }}
-            >
-              {recoveryMessage}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
-              {authBusy ? 'Saving…' : 'Save New Password'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
   if (!authUser) {
     return (
       <div style={shellStyle}>
