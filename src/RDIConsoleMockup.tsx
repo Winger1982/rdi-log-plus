@@ -1637,28 +1637,28 @@ applyStatusPayload(payload);
   };
 
   if (authLoading) {
-    return (
-      <div style={shellStyle}>
-        <div
-          style={{
-            maxWidth: '520px',
-            margin: '8vh auto 0',
-            ...panelStyle,
-            textAlign: 'center',
-            display: 'grid',
-            gap: '12px',
-          }}
-        >
-          <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>RDI Log Plus Beta</div>
-          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-            Checking your beta access and loading your profile…
-          </div>
+  return (
+    <div style={shellStyle}>
+      <div
+        style={{
+          maxWidth: '520px',
+          margin: '8vh auto 0',
+          ...panelStyle,
+          textAlign: 'center',
+          display: 'grid',
+          gap: '12px',
+        }}
+      >
+        <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>RDI Log Plus Beta</div>
+        <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+          Checking your beta access and loading your profile…
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-    if (recoveryMode === 'PASSWORD_RECOVERY') {
+if (recoveryMode === 'PASSWORD_RECOVERY') {
   return (
     <div style={shellStyle}>
       <form
@@ -1702,12 +1702,108 @@ applyStatusPayload(payload);
           />
         </div>
 
-        {authError && <div>{authError}</div>}
-        {recoveryMessage && <div>{recoveryMessage}</div>}
+        {authError && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(185, 28, 28, 0.18)',
+              border: '1px solid rgba(248, 113, 113, 0.45)',
+              color: '#fee2e2',
+              fontWeight: 700,
+            }}
+          >
+            {authError}
+          </div>
+        )}
+
+        {recoveryMessage && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(22, 163, 74, 0.18)',
+              border: '1px solid rgba(74, 222, 128, 0.45)',
+              color: '#ecfdf5',
+              fontWeight: 700,
+            }}
+          >
+            {recoveryMessage}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
             {authBusy ? 'Saving…' : 'Save New Password'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+if (!authUser) {
+  return (
+    <div style={shellStyle}>
+      <form
+        onSubmit={handleSignIn}
+        style={{
+          maxWidth: '520px',
+          margin: '7vh auto 0',
+          ...panelStyle,
+          display: 'grid',
+          gap: '14px',
+        }}
+      >
+        <div style={{ display: 'grid', gap: '4px' }}>
+          <div style={{ fontSize: '1.55rem', fontWeight: 800 }}>RDI Log Plus Beta Login</div>
+          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+            Approved beta testers can sign in here using the email and password provided for testing.
+          </div>
+        </div>
+
+        <div>
+          <div style={labelStyle}>Email</div>
+          <input
+            type="email"
+            value={authEmail}
+            onChange={(event) => setAuthEmail(event.target.value)}
+            style={inputStyle}
+            autoComplete="email"
+            required
+          />
+        </div>
+
+        <div>
+          <div style={labelStyle}>Password</div>
+          <input
+            type="password"
+            value={authPassword}
+            onChange={(event) => setAuthPassword(event.target.value)}
+            style={inputStyle}
+            autoComplete="current-password"
+            required
+          />
+        </div>
+
+        {authError && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(185, 28, 28, 0.18)',
+              border: '1px solid rgba(248, 113, 113, 0.45)',
+              color: '#fee2e2',
+              fontWeight: 700,
+            }}
+          >
+            {authError}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
+            {authBusy ? 'Signing In…' : 'Sign In'}
           </button>
         </div>
       </form>
