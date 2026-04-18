@@ -116,14 +116,6 @@ type EditContactForm = {
 
 type EditContactErrors = Partial<Record<keyof EditContactForm, string>>;
 
-type AuthProfile = {
-  id: string;
-  email: string | null;
-  display_name: string | null;
-  callsign: string | null;
-  role: 'admin' | 'tester';
-  approved: boolean;
-};
 
 type SetupDraftSnapshot = {
   profileDraft: StationProfile;
@@ -418,7 +410,6 @@ export default function RDIConsoleMockup({
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState('');
   const [authUser, setAuthUser] = useState<User | null>(null);
-  const [authProfile, setAuthProfile] = useState<AuthProfile | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [hasLoggedAppOpen, setHasLoggedAppOpen] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>('NONE');
@@ -481,22 +472,6 @@ export default function RDIConsoleMockup({
   const [weather, setWeather] = useState<StationWeather>(DEFAULT_WEATHER);
   const [propagation, setPropagation] = useState<PropagationData>(DEFAULT_PROPAGATION);
 
-  const syncProfileFromAuth = useCallback((profileRow: AuthProfile | null) => {
-    if (!profileRow) return;
-
-    setProfile((prev) => ({
-      ...prev,
-      operatorName: prev.operatorName || profileRow.display_name || '',
-      callsign: prev.callsign || profileRow.callsign || '',
-    }));
-
-    setProfileDraft((prev) => ({
-      ...prev,
-      operatorName: prev.operatorName || profileRow.display_name || '',
-      callsign: prev.callsign || profileRow.callsign || '',
-    }));
-  }, []);
-
   const logActivity = useCallback(
     async (eventName: string, eventDetail?: string, userIdOverride?: string) => {
       const userId = userIdOverride || authUser?.id;
@@ -514,36 +489,6 @@ export default function RDIConsoleMockup({
     },
     [authUser],
   );
-
-  const loadAuthProfile = useCallback(
-    async (userId: string) => {
-      if (!supabase) {
-        setAuthError('Supabase is not configured.');
-        setAuthLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, display_name, callsign, role, approved')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        setAuthError(error.message || 'Unable to load beta profile.');
-        setAuthProfile(null);
-        setAuthLoading(false);
-        return;
-      }
-
-      const nextProfile = (data || null) as AuthProfile | null;
-      setAuthProfile(nextProfile);
-      syncProfileFromAuth(nextProfile);
-      setAuthLoading(false);
-    },
-    [syncProfileFromAuth],
-  );
-
   useEffect(() => {
     if (!supabase) {
       setAuthError('Supabase is not configured.');
@@ -562,77 +507,65 @@ export default function RDIConsoleMockup({
 
       const nextUser = session?.user ?? null;
       setAuthUser(nextUser);
+      setAuthLoading(false);
+    };
 
-      if (nextUser) {
-        await loadAuthProfile(nextUser.id);
-      } else {
-        setAuthProfile(null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUser = session?.user ?? null;
+      setAuthUser(nextUser);
+      setHasLoggedAppOpen(false);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        window.sessionStorage.setItem('rdi.passwordRecovery', 'true');
+        setShowWelcomeOverlay(false);
+        setRecoveryMode('PASSWORD_RECOVERY');
+        setAuthLoading(false);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        window.sessionStorage.removeItem('rdi.passwordRecovery');
+        setRecoveryMode('NONE');
+        setRecoveryPassword('');
+        setRecoveryPasswordConfirm('');
+        setRecoveryMessage('');
+      }
+
+      setAuthLoading(false);
+    });
+
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      const recoveryLink =
+        hash.includes('type=recovery') ||
+        search.includes('type=recovery') ||
+        search.includes('token_hash=') ||
+        hash.includes('access_token=');
+
+      const storedRecovery = window.sessionStorage.getItem('rdi.passwordRecovery') === 'true';
+
+      if (recoveryLink || storedRecovery) {
+        setShowWelcomeOverlay(false);
+        setRecoveryMode('PASSWORD_RECOVERY');
         setAuthLoading(false);
       }
-    };
-        const {
-  data: { subscription },
-} = supabase.auth.onAuthStateChange((event, session) => {
-  const nextUser = session?.user ?? null;
-  setAuthUser(nextUser);
-  setHasLoggedAppOpen(false);
+    }
 
-  if (event === 'PASSWORD_RECOVERY') {
-  window.sessionStorage.setItem('rdi.passwordRecovery', 'true');
-  setShowWelcomeOverlay(false);
-  setRecoveryMode('PASSWORD_RECOVERY');
-  setAuthLoading(false);
-  return;
-}
-
-  if (event === 'SIGNED_OUT') {
-  window.sessionStorage.removeItem('rdi.passwordRecovery');
-  setRecoveryMode('NONE');
-  setRecoveryPassword('');
-  setRecoveryPasswordConfirm('');
-  setRecoveryMessage('');
-}
-
-  if (nextUser) {
-    setAuthLoading(true);
-    void loadAuthProfile(nextUser.id);
-  } else {
-    setAuthProfile(null);
-    setAuthLoading(false);
-  }
-});
-
-if (typeof window !== 'undefined') {
-  const hash = window.location.hash || '';
-  const search = window.location.search || '';
-  const recoveryLink =
-    hash.includes('type=recovery') ||
-    search.includes('type=recovery') ||
-    search.includes('token_hash=') ||
-    hash.includes('access_token=');
-
-  const storedRecovery = window.sessionStorage.getItem('rdi.passwordRecovery') === 'true';
-
-  if (recoveryLink || storedRecovery) {
-    setShowWelcomeOverlay(false);
-    setRecoveryMode('PASSWORD_RECOVERY');
-    setAuthLoading(false);
-  }
-}
-
-void bootstrap();
+    void bootstrap();
 
     return () => {
       active = false;
       subscription.unsubscribe();
     };
-  }, [loadAuthProfile]);
-
+  }, []);
   useEffect(() => {
-    if (!authUser || !authProfile?.approved || hasLoggedAppOpen) return;
+    if (!authUser || hasLoggedAppOpen) return;
     void logActivity('app_opened', 'Opened RDI Log Plus dashboard', authUser.id);
     setHasLoggedAppOpen(true);
-  }, [authProfile?.approved, authUser, hasLoggedAppOpen, logActivity]);
+  }, [authUser, hasLoggedAppOpen, logActivity]);
 
   useEffect(() => {
     if (!authUser && hasLoggedAppOpen) {
@@ -1597,16 +1530,8 @@ applyStatusPayload(payload);
       await logActivity('signed_out', 'Signed out of RDI Log Plus beta.', authUser.id);
     }
     await supabase.auth.signOut();
-    setAuthProfile(null);
     setAuthUser(null);
     setAuthBusy(false);
-  };
-
-  const handleRefreshBetaProfile = async () => {
-    if (!authUser) return;
-    setAuthLoading(true);
-    setAuthError('');
-    await loadAuthProfile(authUser.id);
   };
 
   const handleOpenQuickStart = () => {
@@ -1652,7 +1577,7 @@ applyStatusPayload(payload);
       >
         <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>RDI Log Plus Beta</div>
         <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-          Checking your beta access and loading your profile…
+          Checking your sign-in session…
         </div>
       </div>
     </div>
@@ -1675,7 +1600,7 @@ if (!authUser) {
         <div style={{ display: 'grid', gap: '4px' }}>
           <div style={{ fontSize: '1.55rem', fontWeight: 800 }}>RDI Log Plus Beta Login</div>
           <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-            Approved beta testers can sign in here using the email and password provided for testing.
+            Sign in here using your beta test email and password.
           </div>
         </div>
 
@@ -1727,118 +1652,6 @@ if (!authUser) {
     </div>
   );
 }
-
-  if (!authUser) {
-    return (
-      <div style={shellStyle}>
-        <form
-          onSubmit={handleSignIn}
-          style={{
-            maxWidth: '520px',
-            margin: '7vh auto 0',
-            ...panelStyle,
-            display: 'grid',
-            gap: '14px',
-          }}
-        >
-          <div style={{ display: 'grid', gap: '4px' }}>
-            <div style={{ fontSize: '1.55rem', fontWeight: 800 }}>RDI Log Plus Beta Login</div>
-            <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-              Approved beta testers can sign in here using the email and password provided for testing.
-            </div>
-          </div>
-
-          <div>
-            <div style={labelStyle}>Email</div>
-            <input
-              type="email"
-              value={authEmail}
-              onChange={(event) => setAuthEmail(event.target.value)}
-              style={inputStyle}
-              autoComplete="email"
-              required
-            />
-          </div>
-
-          <div>
-            <div style={labelStyle}>Password</div>
-            <input
-              type="password"
-              value={authPassword}
-              onChange={(event) => setAuthPassword(event.target.value)}
-              style={inputStyle}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
-          {authError && (
-            <div
-              style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                background: 'rgba(185, 28, 28, 0.18)',
-                border: '1px solid rgba(248, 113, 113, 0.45)',
-                color: '#fee2e2',
-                fontWeight: 700,
-              }}
-            >
-              {authError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button type="submit" style={primaryButtonStyle} disabled={authBusy}>
-              {authBusy ? 'Signing In…' : 'Sign In'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  if (!authProfile) {
-    return (
-      <div style={shellStyle}>
-        <div style={{ maxWidth: '560px', margin: '8vh auto 0', ...panelStyle, display: 'grid', gap: '14px' }}>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>Preparing Your Beta Profile</div>
-          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-            Your login worked, but your beta profile is not ready yet. Use refresh once, and if it still does not appear,
-            check that your user exists in Supabase Authentication and Profiles.
-          </div>
-          {authError && (
-            <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(185, 28, 28, 0.18)', border: '1px solid rgba(248, 113, 113, 0.45)', color: '#fee2e2', fontWeight: 700 }}>
-              {authError}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button type="button" style={primaryButtonStyle} onClick={handleRefreshBetaProfile}>Refresh Profile</button>
-            <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>Sign Out</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authProfile.approved) {
-    return (
-      <div style={shellStyle}>
-        <div style={{ maxWidth: '560px', margin: '8vh auto 0', ...panelStyle, display: 'grid', gap: '14px' }}>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>Beta Access Pending</div>
-          <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
-            Your account has signed in successfully, but beta access has not been approved yet.
-          </div>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(251, 191, 36, 0.10)', border: '1px solid rgba(251, 191, 36, 0.24)', color: '#fff7ed', lineHeight: 1.7, fontWeight: 600 }}>
-            Signed in as <strong>{authProfile.email || authUser.email || 'tester'}</strong>. Once approved, refresh or sign in again.
-          </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button type="button" style={primaryButtonStyle} onClick={handleRefreshBetaProfile}>Refresh Access</button>
-            <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>Sign Out</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={shellStyle}>
@@ -2950,7 +2763,7 @@ if (!authUser) {
               {clusterSettings.clusterName} {clusterBadge.label}
             </div>
             <div style={headerBadgeStyle('rgba(255,255,255,0.05)', 'rgba(180, 200, 226, 0.2)', '#f0f6ff')}>
-              {authProfile.callsign || authProfile.display_name || authUser.email || 'Beta User'}
+              {profile.callsign || profile.operatorName || authUser.email || 'Beta User'}
             </div>
             <button type="button" style={compactButtonStyle} onClick={() => void handleSignOut()}>
               Sign Out
