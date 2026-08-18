@@ -32,7 +32,7 @@ const CLUSTERDX_SPOTS_URL =
 
 const CLUSTERDX_LIVE_CLUSTER_URL =
   process.env.CLUSTERDX_LIVE_CLUSTER_URL ||
-  `${CLUSTERDX_BASE_URL}/New_ClusterDX/fetch_cluster_data.php`;
+    `${CLUSTERDX_BASE_URL}/New_ClusterDX/fetch_spots.php`;
 
 const DXPROOF_PROPAGATION_URL =
   process.env.DXPROOF_PROPAGATION_URL ||
@@ -132,7 +132,9 @@ function parseJsonSpots(payload, loadSize = DEFAULT_LOAD_SIZE) {
   if (!payload) return [];
 
   const items = Array.isArray(payload)
-    ? payload
+  ? payload
+  : Array.isArray(payload?.rows)
+    ? payload.rows
     : Array.isArray(payload?.spots)
       ? payload.spots
       : Array.isArray(payload?.data)
@@ -332,6 +334,8 @@ async function fetchClusterDxSpots({ loadSize = DEFAULT_LOAD_SIZE }) {
   authState.lastError = null;
 
   const liveUrl = new URL(CLUSTERDX_LIVE_CLUSTER_URL);
+  liveUrl.searchParams.set('limit', String(loadSize));
+  liveUrl.searchParams.set('lastMinutes', '10');
   liveUrl.searchParams.set('_ts', String(Date.now()));
 
   const response = await client.get(liveUrl.toString(), {
