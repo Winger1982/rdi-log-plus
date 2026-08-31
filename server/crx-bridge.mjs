@@ -95,7 +95,29 @@ app.get('/api/crx/health', async (_req, res) => {
     });
   }
 });
+app.get('/api/crx/spots-test', async (_req, res) => {
+  try {
+    const data = await crxRequest('get_spots/11m/10', {
+      sortby: 'time',
+      groupby: '1',
+    });
 
+    return res.json({
+      ok: true,
+      count: Array.isArray(data?.spots) ? data.spots.length : 0,
+      spots: Array.isArray(data?.spots) ? data.spots : [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'CRX spots test failed.',
+      crxResponse: error?.response?.data ?? null,
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(`RDI Log Plus CRX bridge running on port ${PORT}`);
   console.log(`CRX API: ${CRX_API_URL}`);
