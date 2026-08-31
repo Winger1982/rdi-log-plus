@@ -120,9 +120,7 @@ app.get('/api/crx/spots-test', async (_req, res) => {
 });
 app.get('/api/crx/map-test', async (_req, res) => {
   try {
-    const data = await crxRequest('get_spots_on_map/11m/10', {
-      net: 'dx',
-    });
+    const data = await crxRequest('get_spots_on_map/11m/10');
 
     return res.json({
       ok: true,
