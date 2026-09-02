@@ -138,6 +138,153 @@ app.get('/api/crx/map-test', async (_req, res) => {
     });
   }
 });
+function firstValue(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value).trim();
+    }
+  }
+
+  return '';
+}
+function normalizeFrequency(value) {
+  const raw = firstValue(value);
+  if (!raw) return '';
+
+  const numeric = Number(raw.replace(',', '.'));
+  if (!Number.isFinite(numeric)) return raw;
+
+  // CRX often returns 11m frequency in kHz.
+  // Example: 27555 becomes 27.555 MHz.
+  if (numeric >= 1000) {
+    return (numeric / 1000).toFixed(3);
+  }
+
+  return numeric.toFixed(3);
+}
+
+function normalizeUtcTime(spot) {
+  const raw = firstValue(
+    spot.date_spot,
+    spot.time,
+    spot.timestamp,
+    spot.datetime,
+  );
+
+  if (!raw) return '';
+
+  // Unix timestamp in seconds.
+  if (/^\d{9,11}$/.test(raw)) {
+    const date = new Date(Number(raw) * 1000);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString().slice(11, 16);
+    }
+  }
+
+  return raw;
+}
+
+function normalizeCrxSpot(spot) {
+  const gridSquare = firstValue(
+    spot.locator_dx,
+    spot.dx_locator,
+    spot.grid_dx,
+    spot.gridSquare,
+  ).toUpperCase();
+
+  const submitterGrid = firstValue(
+    spot.locator_sender,
+    spot.spotter_locator,
+    spot.grid_sender,
+    spot.submitterGrid,
+  ).toUpperCase();
+
+  return {
+    callsign: firstValue(
+      spot.callsign_dx,
+      spot.spotcall,
+      spot.callsign,
+    ).toUpperCase(),
+
+    gridSquare,
+
+    submitterGrid,
+
+    country: firstValue(
+      spot.country_dx,
+      spot.dx_country,
+      spot.country,
+    ),
+
+    source: 'CRX',
+
+    frequency: normalizeFrequency(
+      firstValue(
+        spot.frequency,
+        spot.freq,
+      ),
+    ),
+
+    mode: firstValue(
+      spot.mode,
+      spot.modulation,
+    ).toUpperCase(),
+
+    utcTime: normalizeUtcTime(spot),
+
+    spotter: firstValue(
+      spot.callsign_sender,
+      spot.spotter,
+    ).toUpperCase(),
+
+    report: firstValue(
+      spot.report,
+      spot.rst,
+    ),
+
+    comment: firstValue(
+      spot.comment,
+      spot.comments,
+    ),
+
+    crxSource: firstValue(
+      spot.source,
+      spot.net,
+    ),
+
+    hasLocation: Boolean(gridSquare),
+  };
+}
+
+app.get('/api/crx/spots-normalized-test', async (_req, res) => {
+  try {
+    const data = await crxRequest('get_spots/11m/10', {
+      sortby: 'time',
+      groupby: '1',
+    });
+
+    const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
+    const spots = rawSpots.map(normalizeCrxSpot);
+
+    return res.json({
+      ok: true,
+      count: spots.length,
+      mappableCount: spots.filter((spot) => spot.hasLocation).length,
+      fetchedAt: new Date().toISOString(),
+      spots,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'CRX normalized spots test failed.',
+      crxResponse: error?.response?.data ?? null,
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(`RDI Log Plus CRX bridge running on port ${PORT}`);
   console.log(`CRX API: ${CRX_API_URL}`);
