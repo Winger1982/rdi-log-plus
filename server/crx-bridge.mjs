@@ -285,6 +285,45 @@ app.get('/api/crx/spots-normalized-test', async (_req, res) => {
     });
   }
 });
+app.get('/api/spots', async (req, res) => {
+  try {
+    const requestedSize = Number.parseInt(
+      String(req.query.loadSize || '25'),
+      10,
+    );
+
+    const loadSize = Number.isFinite(requestedSize)
+      ? Math.min(100, Math.max(1, requestedSize))
+      : 25;
+
+    const data = await crxRequest(`get_spots/11m/${loadSize}`, {
+      sortby: 'time',
+      groupby: '1',
+    });
+
+    const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
+    const spots = rawSpots.map(normalizeCrxSpot);
+
+    return res.json({
+      ok: true,
+      source: 'CRX',
+      count: spots.length,
+      mappableCount: spots.filter((spot) => spot.hasLocation).length,
+      fetchedAt: new Date().toISOString(),
+      spots,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      source: 'CRX',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not load CRX 11m spots.',
+      crxResponse: error?.response?.data ?? null,
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(`RDI Log Plus CRX bridge running on port ${PORT}`);
   console.log(`CRX API: ${CRX_API_URL}`);
