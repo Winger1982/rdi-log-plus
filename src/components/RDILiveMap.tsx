@@ -25,11 +25,13 @@ type MapStation = {
   callsign: string;
   operatorName?: string;
   gridSquare: string;
+  latitude?: string;
+  longitude?: string;
   submitterGrid?: string;
   country?: string;
   isRDI?: boolean;
   isActive?: boolean;
-  source?: 'OFFLINE' | 'CLUSTERDX' | 'MANUAL';
+  source?: 'OFFLINE' | 'CLUSTERDX' | 'CRX' | 'MANUAL';
   frequency?: string;
   mode?: string;
   utcTime?: string;
@@ -58,7 +60,7 @@ type BridgeSpotsResponse = {
 
 type LatLngTuple = [number, number];
 
-const BRIDGE_BASE_URL = 'https://rdi-log-plus-bridge.onrender.com';
+const BRIDGE_BASE_URL = 'https://rdi-log-plus-crx-bridge.onrender.com';
 const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY ?? '';
 const MAP_THEME_STORAGE_KEY = 'rdi-map-theme';
 
