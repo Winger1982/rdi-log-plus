@@ -273,10 +273,7 @@ hasLocation: Boolean(
 
 app.get('/api/crx/spots-normalized-test', async (_req, res) => {
   try {
-    const data = await crxRequest('get_spots/11m/10', {
-      sortby: 'time',
-      groupby: '1',
-    });
+    const data = await crxRequest('get_spots_on_map/11m/10');
 
     const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
     const spots = rawSpots.map(normalizeCrxSpot);
