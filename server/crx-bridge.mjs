@@ -252,8 +252,22 @@ function normalizeCrxSpot(spot) {
       spot.source,
       spot.net,
     ),
+latitude: firstValue(
+  spot.dx_lat,
+  spot.latitude,
+  spot.lat,
+),
 
-    hasLocation: Boolean(gridSquare),
+longitude: firstValue(
+  spot.dx_lon,
+  spot.longitude,
+  spot.lon,
+),
+hasLocation: Boolean(
+  gridSquare ||
+  (firstValue(spot.dx_lat, spot.latitude, spot.lat) &&
+   firstValue(spot.dx_lon, spot.longitude, spot.lon))
+),
   };
 }
 
