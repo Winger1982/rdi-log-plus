@@ -394,8 +394,26 @@ export default function RDILiveMap({
   const plottedStations = useMemo(() => {
     return sourceStations
       .map((station) => {
-        const dxCoords = maidenheadToLatLon(station.gridSquare);
-        if (!dxCoords) return null;
+  const latitude =
+  station.latitude?.trim() ? Number(station.latitude) : Number.NaN;
+
+  const longitude =
+  station.longitude?.trim() ? Number(station.longitude) : Number.NaN;
+
+  const directCoords =
+  Number.isFinite(latitude) &&
+  Number.isFinite(longitude) &&
+  latitude >= -90 &&
+  latitude <= 90 &&
+  longitude >= -180 &&
+  longitude <= 180
+    ? { lat: latitude, lon: longitude }
+    : null;
+
+  const dxCoords =
+    directCoords ?? maidenheadToLatLon(station.gridSquare);
+
+  if (!dxCoords) return null;
 
         const submitterCoords =
           station.source === 'CLUSTERDX' && station.submitterGrid
