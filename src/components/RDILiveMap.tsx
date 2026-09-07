@@ -249,11 +249,13 @@ function getPrefixFlag(callsign: string) {
 function getMarkerColor(station: MapStation) {
   if (station.isActive && station.isRDI) return '#f5b301';
   if (station.isRDI) return '#4da3ff';
+  if (station.source === 'CRX') return '#22c55e';
   if (station.source === 'CLUSTERDX') return '#22c55e';
   return '#7ddc6d';
 }
 
 function getSourceLabel(station: MapStation) {
+  if (station.source === 'CRX') return 'CRX';
   if (station.source === 'CLUSTERDX') return 'ClusterDX';
   if (station.source === 'MANUAL') return 'Manual';
   return 'Offline';
@@ -448,7 +450,7 @@ export default function RDILiveMap({
 
   const sourceSummary = useMemo(() => {
     if (dataMode === 'ONLINE' && !mapConnected) {
-      return 'Online mode selected • ClusterDX offline';
+      return 'Online mode selected • CRX offline';
     }
 
     if (dataMode === 'ONLINE' && isLoading) {
@@ -460,7 +462,7 @@ export default function RDILiveMap({
     }
 
     if (dataMode === 'ONLINE' && bridgeConnected) {
-      return `Online mode • Live ClusterDX • ${formatBridgeTime(lastUpdated)}`;
+      return `Online mode • Live CRX • ${formatBridgeTime(lastUpdated)}`;
     }
 
     if (dataMode === 'ONLINE') {
@@ -504,7 +506,7 @@ export default function RDILiveMap({
           {showLiveActivity && (
             <div style={clusterDxBadgeStyle}>
               <span style={{ ...legendDotStyle, background: '#22c55e' }} />
-              ClusterDX spot
+              CRX spot
             </div>
           )}
 
