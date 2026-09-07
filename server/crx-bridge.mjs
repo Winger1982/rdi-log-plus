@@ -307,10 +307,7 @@ app.get('/api/spots', async (req, res) => {
       ? Math.min(100, Math.max(1, requestedSize))
       : 25;
 
-    const data = await crxRequest(`get_spots/11m/${loadSize}`, {
-      sortby: 'time',
-      groupby: '1',
-    });
+    const data = await crxRequest(`get_spots_on_map/11m/${loadSize}`);
 
     const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
     const spots = rawSpots.map(normalizeCrxSpot);
