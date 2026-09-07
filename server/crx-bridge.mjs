@@ -9,15 +9,25 @@ const app = express();
 
 const PORT = Number(process.env.PORT || process.env.CRX_BRIDGE_PORT || 8790);
 
-const FRONTEND_ORIGIN =
-  process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'https://rdi-log-plus.vercel.app',
+  process.env.FRONTEND_ORIGIN,
+].filter(Boolean);
 
 const CRX_API_URL =
   process.env.CRX_API_URL || 'https://s.crx.cloud/api/';
 
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   }),
 );
