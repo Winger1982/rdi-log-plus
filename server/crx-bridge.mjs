@@ -345,5 +345,5 @@ app.get('/api/spots', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`RDI Log Plus CRX bridge running on port ${PORT}`);
   console.log(`CRX API: ${CRX_API_URL}`);
-  console.log(`Allowed frontend origin: ${FRONTEND_ORIGIN}`);
+  console.log(`Allowed frontend origins: ${ALLOWED_ORIGINS.join(', ')}`);
 });
