@@ -651,7 +651,7 @@ export default function RDIConsoleMockup({
     return deriveWeatherStatus(weather.weatherCode, Number.isNaN(rainValue) ? 0 : rainValue);
   }, [weather.rainChance, weather.weatherCode]);
 
-  const dataMode: DataMode = clusterState === 'CONNECTED' ? 'ONLINE' : 'OFFLINE';
+  const dataMode: DataMode = 'ONLINE';
 
   const clusterBadge = useMemo(() => {
     switch (clusterState) {
