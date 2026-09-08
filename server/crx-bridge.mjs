@@ -389,7 +389,15 @@ const sunspotRecords = Array.isArray(sunspotResponse.data)
   : [];
 
 const auroraData = auroraResponse.data ?? null;
-
+    
+const latestSunspot = sunspotRecords
+  .filter((item) => item?.Obsdate)
+  .sort(
+    (a, b) =>
+      new Date(b.Obsdate).getTime() -
+      new Date(a.Obsdate).getTime(),
+  )[0];
+    
 return res.json({
   ok: true,
   source: 'NOAA SWPC',
@@ -399,6 +407,8 @@ return res.json({
   aIndex: latestKp?.a_running ?? null,
   kIndex: latestKp?.Kp ?? null,
   kIndexTime: latestKp?.time_tag ?? null,
+  sunspots: latestSunspot?.swpc_ssn ?? null,
+  sunspotsTime: latestSunspot?.Obsdate ?? null,
   sunspotsRaw: sunspotRecords,
   auroraRaw: auroraData,
 });
