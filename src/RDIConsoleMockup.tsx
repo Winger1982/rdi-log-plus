@@ -3001,7 +3001,7 @@ if (!authUser) {
               }}
             >
               <div>
-                <strong>Status:</strong> {clusterSettings.clusterName} {clusterBadge.label}
+                <strong>Status:</strong> {clusterBadge.label}
               </div>
               <div>
                 <strong>Message:</strong> {clusterMessage}
