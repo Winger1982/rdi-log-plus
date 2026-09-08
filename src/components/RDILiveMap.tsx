@@ -278,10 +278,8 @@ function getStoredMapTheme(): MapTheme {
   return stored === 'dark' ? 'dark' : 'light';
 }
 
-function getBaseMapUrl(mapTheme: MapTheme) {
-  return mapTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+function getBaseMapUrl(_mapTheme: MapTheme) {
+  return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 }
 
 function getMapBackground(mapTheme: MapTheme) {
@@ -534,7 +532,7 @@ export default function RDILiveMap({
           style={{ height: '600px', width: '100%' }}
         >
           <TileLayer
-            attribution="&copy; OpenStreetMap contributors &copy; CARTO"
+            attribution="&copy; OpenStreetMap contributors"
             url={getBaseMapUrl(activeMapTheme)}
           />
 
