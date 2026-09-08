@@ -420,8 +420,6 @@ return res.json({
   sunspotsTime: latestSunspot?.Obsdate ?? null,
   aurora: auroraMax,
   auroraTime: auroraData?.['Observation Time'] ?? null,
-  sunspotsRaw: sunspotRecords,
-  auroraRaw: auroraData,
 });
   } catch (error) {
     return res.status(500).json({
