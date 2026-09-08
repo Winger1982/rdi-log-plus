@@ -352,7 +352,7 @@ app.get('/api/propagation-test', async (_req, res) => {
     axios.get('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', {
       timeout: 15000,
     }),
-    axios.get('https://services.swpc.noaa.gov/json/sunspot_report.json', {
+    axios.get('https://services.swpc.noaa.gov/json/solar-cycle/swpc_observed_ssn.json', {
       timeout: 15000,
     }),
     axios.get('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json', {
