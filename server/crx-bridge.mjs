@@ -353,13 +353,40 @@ app.get('/api/propagation-test', async (_req, res) => {
       }),
     ]);
 
-    return res.json({
-      ok: true,
-      source: 'NOAA SWPC',
-      fetchedAt: new Date().toISOString(),
-      solarFlux: fluxResponse.data,
-      kIndex: kpResponse.data,
-    });
+    const fluxRecords = Array.isArray(fluxResponse.data)
+  ? fluxResponse.data
+  : [];
+
+const kpRecords = Array.isArray(kpResponse.data)
+  ? kpResponse.data
+  : [];
+
+const latestFlux = fluxRecords
+  .filter((item) => item?.time_tag)
+  .sort(
+    (a, b) =>
+      new Date(b.time_tag).getTime() -
+      new Date(a.time_tag).getTime(),
+  )[0];
+
+const latestKp = kpRecords
+  .filter((item) => item?.time_tag)
+  .sort(
+    (a, b) =>
+      new Date(b.time_tag).getTime() -
+      new Date(a.time_tag).getTime(),
+  )[0];
+
+return res.json({
+  ok: true,
+  source: 'NOAA SWPC',
+  fetchedAt: new Date().toISOString(),
+  solarFlux: latestFlux?.flux ?? null,
+  solarFluxTime: latestFlux?.time_tag ?? null,
+  aIndex: latestKp?.a_running ?? null,
+  kIndex: latestKp?.Kp ?? null,
+  kIndexTime: latestKp?.time_tag ?? null,
+});
   } catch (error) {
     return res.status(500).json({
       ok: false,
