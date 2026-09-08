@@ -2733,7 +2733,7 @@ if (!authUser) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Map Status</div>
             <div style={headerBadgeStyle(clusterBadge.background, clusterBadge.border, clusterBadge.color)}>
-              {clusterSettings.clusterName} {clusterBadge.label}
+              {clusterBadge.label}
             </div>
             <div style={headerBadgeStyle('rgba(255,255,255,0.05)', 'rgba(180, 200, 226, 0.2)', '#f0f6ff')}>
               {profile.callsign || profile.operatorName || authUser.email || 'Beta User'}
