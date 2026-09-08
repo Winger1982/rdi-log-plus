@@ -344,14 +344,21 @@ app.get('/api/spots', async (req, res) => {
 });
 app.get('/api/propagation-test', async (_req, res) => {
   try {
-    const [fluxResponse, kpResponse] = await Promise.all([
-      axios.get('https://services.swpc.noaa.gov/json/f107_cm_flux.json', {
-        timeout: 15000,
-      }),
-      axios.get('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', {
-        timeout: 15000,
-      }),
-    ]);
+    const [fluxResponse, kpResponse, sunspotResponse, auroraResponse] =
+  await Promise.all([
+    axios.get('https://services.swpc.noaa.gov/json/f107_cm_flux.json', {
+      timeout: 15000,
+    }),
+    axios.get('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', {
+      timeout: 15000,
+    }),
+    axios.get('https://services.swpc.noaa.gov/json/sunspot_report.json', {
+      timeout: 15000,
+    }),
+    axios.get('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json', {
+      timeout: 15000,
+    }),
+  ]);
 
     const fluxRecords = Array.isArray(fluxResponse.data)
   ? fluxResponse.data
@@ -376,6 +383,12 @@ const latestKp = kpRecords
       new Date(b.time_tag).getTime() -
       new Date(a.time_tag).getTime(),
   )[0];
+    
+const sunspotRecords = Array.isArray(sunspotResponse.data)
+  ? sunspotResponse.data
+  : [];
+
+const auroraData = auroraResponse.data ?? null;
 
 return res.json({
   ok: true,
@@ -386,6 +399,8 @@ return res.json({
   aIndex: latestKp?.a_running ?? null,
   kIndex: latestKp?.Kp ?? null,
   kIndexTime: latestKp?.time_tag ?? null,
+  sunspotsRaw: sunspotRecords,
+  auroraRaw: auroraData,
 });
   } catch (error) {
     return res.status(500).json({
