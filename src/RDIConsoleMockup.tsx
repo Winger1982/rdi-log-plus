@@ -562,6 +562,55 @@ export default function RDIConsoleMockup({
     };
   }, []);
   useEffect(() => {
+  let active = true;
+
+  const loadPropagation = async () => {
+    try {
+      const response = await fetch(
+        'https://rdi-log-plus-crx-bridge.onrender.com/api/propagation-test',
+      );
+
+      if (!response.ok) {
+        throw new Error(`Propagation request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!active) return;
+
+      setPropagation({
+        dayCondition: 'Unknown',
+        nightCondition: 'Unknown',
+        solarFlux: String(data.solarFlux ?? '—'),
+        sunspots: String(data.sunspots ?? '—'),
+        aIndex: String(data.aIndex ?? '—'),
+        kIndex: String(data.kIndex ?? '—'),
+        aurora: String(data.aurora ?? '—'),
+        updatedAt: data.fetchedAt ?? null,
+        sourceUrl:
+          'https://services.swpc.noaa.gov/',
+        error: null,
+      });
+    } catch (error) {
+      if (!active) return;
+
+      setPropagation((prev) => ({
+        ...prev,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to load NOAA propagation data.',
+      }));
+    }
+  };
+
+  void loadPropagation();
+
+  return () => {
+    active = false;
+  };
+}, []);
+  useEffect(() => {
     if (!authUser || hasLoggedAppOpen) return;
     void logActivity('app_opened', 'Opened RDI Log Plus dashboard', authUser.id);
     setHasLoggedAppOpen(true);
