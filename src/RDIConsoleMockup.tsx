@@ -653,39 +653,12 @@ export default function RDIConsoleMockup({
 
   const dataMode: DataMode = 'ONLINE';
 
-  const clusterBadge = useMemo(() => {
-    switch (clusterState) {
-      case 'CONNECTED':
-        return {
-          label: 'Connected',
-          background: 'rgba(82, 151, 117, 0.28)',
-          border: 'rgba(151, 212, 177, 0.42)',
-          color: '#e6fff1',
-        };
-      case 'CONNECTING':
-        return {
-          label: 'Connecting',
-          background: 'rgba(88, 122, 170, 0.28)',
-          border: 'rgba(152, 184, 229, 0.38)',
-          color: '#e7f1ff',
-        };
-      case 'ERROR':
-        return {
-          label: 'Error',
-          background: 'rgba(160, 92, 92, 0.26)',
-          border: 'rgba(217, 149, 149, 0.4)',
-          color: '#fff0f0',
-        };
-      case 'DISCONNECTED':
-      default:
-        return {
-          label: 'Disconnected',
-          background: 'rgba(105, 124, 147, 0.24)',
-          border: 'rgba(170, 188, 208, 0.36)',
-          color: '#eef4fb',
-        };
-    }
-  }, [clusterState]);
+  const clusterBadge = {
+  label: 'CRX Map',
+  background: 'rgba(82, 151, 117, 0.28)',
+  border: 'rgba(151, 212, 177, 0.42)',
+  color: '#e6fff1',
+};
 
   const warningBadge =
     weatherStatus === 'WARNING'
