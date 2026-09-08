@@ -390,6 +390,15 @@ const sunspotRecords = Array.isArray(sunspotResponse.data)
 
 const auroraData = auroraResponse.data ?? null;
     
+const auroraCoordinates = Array.isArray(auroraData?.coordinates)
+  ? auroraData.coordinates
+  : [];
+
+const auroraMax = auroraCoordinates.reduce((maxValue, item) => {
+  const value = Array.isArray(item) ? Number(item[2]) : Number.NaN;
+  return Number.isFinite(value) ? Math.max(maxValue, value) : maxValue;
+}, 0);  
+    
 const latestSunspot = sunspotRecords
   .filter((item) => item?.Obsdate)
   .sort(
@@ -409,6 +418,8 @@ return res.json({
   kIndexTime: latestKp?.time_tag ?? null,
   sunspots: latestSunspot?.swpc_ssn ?? null,
   sunspotsTime: latestSunspot?.Obsdate ?? null,
+  aurora: auroraMax,
+  auroraTime: auroraData?.['Observation Time'] ?? null,
   sunspotsRaw: sunspotRecords,
   auroraRaw: auroraData,
 });
