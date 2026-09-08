@@ -342,6 +342,35 @@ app.get('/api/spots', async (req, res) => {
     });
   }
 });
+app.get('/api/propagation-test', async (_req, res) => {
+  try {
+    const [fluxResponse, kpResponse] = await Promise.all([
+      axios.get('https://services.swpc.noaa.gov/json/f107_cm_flux.json', {
+        timeout: 15000,
+      }),
+      axios.get('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', {
+        timeout: 15000,
+      }),
+    ]);
+
+    return res.json({
+      ok: true,
+      source: 'NOAA SWPC',
+      fetchedAt: new Date().toISOString(),
+      solarFlux: fluxResponse.data,
+      kIndex: kpResponse.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      source: 'NOAA SWPC',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not load NOAA propagation data.',
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(`RDI Log Plus CRX bridge running on port ${PORT}`);
   console.log(`CRX API: ${CRX_API_URL}`);
