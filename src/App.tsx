@@ -333,6 +333,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+  let active = true;
+
+  const syncCurrentLogbooks = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!active || !session?.user) return;
+
+    const books = loadLogbooks();
+    const result = await syncLogbooksToSupabase(books);
+
+    if (!result.ok) {
+      console.error('Supabase logbook sync failed:', result.error);
+    } else {
+      console.log(`Supabase logbook sync complete: ${result.uploaded} logbook(s).`);
+    }
+  };
+
+  void syncCurrentLogbooks();
+
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -343,11 +364,14 @@ export default function App() {
     void syncLogbooksToSupabase(books).then((result) => {
       if (!result.ok) {
         console.error('Supabase logbook sync failed:', result.error);
+      } else {
+        console.log(`Supabase logbook sync complete: ${result.uploaded} logbook(s).`);
       }
     });
   });
 
   return () => {
+    active = false;
     subscription.unsubscribe();
   };
 }, []);
