@@ -15,6 +15,7 @@ import {
 } from './lib/logbook-storage';
 import { parseSimpleCSV } from './lib/csv';
 import { syncLogbooksToSupabase } from './lib/supabase-logbooks';
+import { supabase } from './lib/supabase';
 import RDIConsoleMockup from './RDIConsoleMockup';
 
 type ToolPreset = {
@@ -330,6 +331,26 @@ export default function App() {
   useEffect(() => {
     refreshLogbooks();
   }, []);
+
+  useEffect(() => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.user) return;
+
+    const books = loadLogbooks();
+
+    void syncLogbooksToSupabase(books).then((result) => {
+      if (!result.ok) {
+        console.error('Supabase logbook sync failed:', result.error);
+      }
+    });
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
