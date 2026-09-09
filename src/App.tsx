@@ -15,6 +15,7 @@ import {
 } from './lib/logbook-storage';
 import { parseSimpleCSV } from './lib/csv';
 import { syncLogbooksToSupabase } from './lib/supabase-logbooks';
+import { syncQsoRecordsToSupabase } from './lib/supabase-qso-records';
 import { supabase } from './lib/supabase';
 import RDIConsoleMockup from './RDIConsoleMockup';
 
@@ -97,6 +98,31 @@ function loadResilientRecords(logbookId: string): RdiLogRecord[] {
 function persistRecords(logbookId: string, nextRecords: RdiLogRecord[]) {
   saveLogbookRecords(logbookId, nextRecords);
   clearCachedRecords(logbookId);
+
+  const books = loadLogbooks();
+
+  void syncLogbooksToSupabase(books).then(async (logbookResult) => {
+    if (!logbookResult.ok) {
+      console.error(
+        'Supabase logbook sync failed before QSO sync:',
+        logbookResult.error,
+      );
+      return;
+    }
+
+    const qsoResult = await syncQsoRecordsToSupabase(
+      logbookId,
+      nextRecords,
+    );
+
+    if (!qsoResult.ok) {
+      console.error('Supabase QSO sync failed:', qsoResult.error);
+    } else {
+      console.log(
+        `Supabase QSO sync complete: ${qsoResult.uploaded} QSO(s).`,
+      );
+    }
+  });
 }
 
 function mergeImportedRecords(existing: RdiLogRecord[], imported: RdiLogRecord[]): RdiLogRecord[] {
