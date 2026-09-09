@@ -426,13 +426,14 @@ if (firstCloudLogbook) {
     
  window.setTimeout(() => {
   void syncCurrentLogbooks();
-}, 0);
+ }, 0);
+}); 
 
   return () => {
     active = false;
     subscription.unsubscribe();
-  };
-}, []);
+ };
+ }, []);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
