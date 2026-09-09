@@ -373,7 +373,12 @@ export default function App() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
+    
+    console.log(
+      'syncCurrentLogbooks session:',
+      session?.user ? 'authenticated' : 'no user',
+    );
+    
     if (!active || !session?.user) return;
 
     const books = loadLogbooks();
