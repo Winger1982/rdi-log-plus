@@ -690,6 +690,8 @@ export default function App() {
   }
 });
 
+};
+
   return (
     <>
       <RDIConsoleMockup
