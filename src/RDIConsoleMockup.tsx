@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createClient, type User } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import type { CSSProperties, ChangeEvent, FormEvent } from 'react';
 import type { Logbook } from './lib/logbook-types';
 import type { RdiLogRecord } from './lib/types';
+import { supabase } from './lib/supabase';
 import RDILiveMap from './components/RDILiveMap';
 // build refresh
 
@@ -144,8 +145,6 @@ type RDIConsoleMockupProps = {
 type SortField = 'callsign' | 'date' | 'time' | 'frequency' | 'mode';
 
 const BRIDGE_BASE_URL = 'https://rdi-log-plus-bridge.onrender.com';
-const SUPABASE_URL = 'https://axhpjwqvdtjeyqyiqoyg.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_6hEILqgZS51Q7Bk5OiusKw_BcsDHq07';
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
 const CLUSTER_STORAGE_KEY = 'rdi.console.cluster';
 const SETUP_DRAFT_STORAGE_KEY = 'rdi.console.setupDraft';
@@ -207,15 +206,6 @@ const DESIRED_PRESETS: ToolPreset[] = [
   { label: 'RDI 11m Net', frequency: '27.405', mode: 'USB' },
   { label: 'Local Calling Frequency Americas', frequency: '27.385', mode: 'LSB' },
 ];
-
-const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    })
-  : null;
 
 function windDirectionToCompass(degrees: number | undefined): string {
   if (degrees === undefined || Number.isNaN(degrees)) return '';
