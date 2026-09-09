@@ -383,7 +383,6 @@ export default function App() {
     } else {
       console.log(`Supabase logbook sync complete: ${result.uploaded} logbook(s).`);
     }
-  };
 
     const cloudLogbooks = await loadLogbooksFromSupabase();
 
