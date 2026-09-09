@@ -15,7 +15,10 @@ import {
 } from './lib/logbook-storage';
 import { parseSimpleCSV } from './lib/csv';
 import { syncLogbooksToSupabase } from './lib/supabase-logbooks';
-import { syncQsoRecordsToSupabase } from './lib/supabase-qso-records';
+import {
+  syncQsoRecordsToSupabase,
+  deleteQsoRecordFromSupabase,
+} from './lib/supabase-qso-records';
 import { supabase } from './lib/supabase';
 import RDIConsoleMockup from './RDIConsoleMockup';
 
@@ -675,7 +678,17 @@ export default function App() {
     const updatedRecords = records.filter((record) => record.id !== recordId);
     persistRecords(activeLogbook.id, updatedRecords);
     setRecords(updatedRecords);
-  };
+  
+  void deleteQsoRecordFromSupabase(
+  activeLogbook.id,
+  recordId,
+).then((result) => {
+  if (!result.ok) {
+    console.error('Supabase QSO delete failed:', result.error);
+  } else {
+    console.log('Supabase QSO delete complete.');
+  }
+});
 
   return (
     <>
