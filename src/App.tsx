@@ -19,6 +19,10 @@ import {
   syncQsoRecordsToSupabase,
   deleteQsoRecordFromSupabase,
 } from './lib/supabase-qso-records';
+import {
+  loadLogbooksFromSupabase,
+  loadQsoRecordsFromSupabase,
+} from './lib/supabase-read';
 import { supabase } from './lib/supabase';
 import RDIConsoleMockup from './RDIConsoleMockup';
 
@@ -380,6 +384,39 @@ export default function App() {
       console.log(`Supabase logbook sync complete: ${result.uploaded} logbook(s).`);
     }
   };
+
+    const cloudLogbooks = await loadLogbooksFromSupabase();
+
+if (!cloudLogbooks.ok) {
+  console.error('Supabase cloud logbook read failed:', cloudLogbooks.error);
+  return;
+}
+
+console.log(
+  'Supabase cloud logbooks read:',
+  cloudLogbooks.logbooks,
+);
+
+const firstCloudLogbook = cloudLogbooks.logbooks[0];
+
+if (firstCloudLogbook) {
+  const cloudRecords = await loadQsoRecordsFromSupabase(
+    firstCloudLogbook.id,
+  );
+
+  if (!cloudRecords.ok) {
+    console.error(
+      'Supabase cloud QSO read failed:',
+      cloudRecords.error,
+    );
+  } else {
+    console.log(
+      'Supabase cloud QSOs read:',
+      cloudRecords.records,
+    );
+  }
+ }
+};
 
   void syncCurrentLogbooks();
 
