@@ -14,6 +14,7 @@ import {
   updateLogbookMeta,
 } from './lib/logbook-storage';
 import { parseSimpleCSV } from './lib/csv';
+import { syncLogbooksToSupabase } from './lib/supabase-logbooks';
 import RDIConsoleMockup from './RDIConsoleMockup';
 
 type ToolPreset = {
@@ -322,6 +323,8 @@ export default function App() {
     setLogbooks(books);
     setActiveLogbook(active);
     setRecords(loadResilientRecords(active.id));
+    
+    void syncLogbooksToSupabase(books);
   };
 
   useEffect(() => {
