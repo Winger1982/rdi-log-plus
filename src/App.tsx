@@ -424,15 +424,7 @@ if (firstCloudLogbook) {
   } = supabase.auth.onAuthStateChange((_event, session) => {
     if (!session?.user) return;
 
-    const books = loadLogbooks();
-
-    void syncLogbooksToSupabase(books).then((result) => {
-      if (!result.ok) {
-        console.error('Supabase logbook sync failed:', result.error);
-      } else {
-        console.log(`Supabase logbook sync complete: ${result.uploaded} logbook(s).`);
-      }
-    });
+    void syncCurrentLogbooks();
   });
 
   return () => {
