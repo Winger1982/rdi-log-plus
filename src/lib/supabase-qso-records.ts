@@ -81,3 +81,48 @@ export async function syncQsoRecordsToSupabase(
     error: null,
   };
 }
+
+export async function deleteQsoRecordFromSupabase(
+  logbookId: string,
+  recordId: string,
+) {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    return {
+      ok: false,
+      error: sessionError.message,
+    };
+  }
+
+  const userId = session?.user.id;
+
+  if (!userId) {
+    return {
+      ok: false,
+      error: 'No authenticated Supabase user.',
+    };
+  }
+
+  const { error } = await supabase
+    .from('qso_records')
+    .delete()
+    .eq('user_id', userId)
+    .eq('logbook_id', logbookId)
+    .eq('id', recordId);
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+    };
+  }
+
+  return {
+    ok: true,
+    error: null,
+  };
+}
