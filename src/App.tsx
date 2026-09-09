@@ -369,6 +369,7 @@ export default function App() {
   let active = true;
 
   const syncCurrentLogbooks = async () => {
+    console.log('syncCurrentLogbooks started');
     const {
       data: { session },
     } = await supabase.auth.getSession();
