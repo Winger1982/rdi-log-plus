@@ -423,9 +423,10 @@ if (firstCloudLogbook) {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
     if (!session?.user) return;
-
-    void syncCurrentLogbooks();
-  });
+    
+ window.setTimeout(() => {
+  void syncCurrentLogbooks();
+}, 0);
 
   return () => {
     active = false;
