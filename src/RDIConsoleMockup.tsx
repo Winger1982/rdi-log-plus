@@ -1370,10 +1370,6 @@ applyStatusPayload(payload);
   };
 
   useEffect(() => {
-    void checkClusterStatus();
-  }, [checkClusterStatus]);
-
-  useEffect(() => {
     void fetchWeather(profile.latitude, profile.longitude);
     const interval = window.setInterval(() => {
       void fetchWeather(profile.latitude, profile.longitude);
