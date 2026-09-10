@@ -1779,15 +1779,16 @@ if (!authUser) {
             >
               <div style={{ ...labelStyle, marginBottom: '10px' }}>Feature Summary</div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                <div>• Live 11m activity map with clickable spots for rotor heading and distance</div>
-                <div>• Rain weather overlay with station-focused operating awareness</div>
+                <div>• Live CRX 11m activity map with clickable spots for rotor heading and distance</div>
+                <div>• Rain and weather awareness for your station location</div>
+                <div>• Live propagation snapshot</div>
                 <div>• Light and dark map theme choice in Setup</div>
                 <div>• Station profile saving for operator name, callsign, grid square, and coordinates</div>
                 <div>• Quick presets for common 11m operating frequencies</div>
                 <div>• QSO logging, import, export, contact search, and contact editing</div>
-                <div>• Welcome overlay with ClusterDX signup link and first-open guidance</div>
+                <div>• CRX 11m signup guidance for new users</div>
                 <div>• Quick Start Guide built into the app for new users and beta testers</div>
-              </div>
+             </div>
             </div>
 
             <div
