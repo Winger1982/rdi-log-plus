@@ -3,6 +3,8 @@ import type { CSSProperties, ChangeEvent, FormEvent } from 'react';
 import type { Logbook } from './lib/logbook-types';
 import type { RdiLogRecord } from './lib/types';
 import {
+  ensureDefaultLogbook,
+  restoreCloudDataToLocal,
   loadLogbooks,
   getActiveLogbookId,
   setActiveLogbookId,
@@ -380,17 +382,98 @@ export default function App() {
 
   useEffect(() => {
   let active = true;
+  let cloudStartupInProgress = false;
 
   const syncCurrentLogbooks = async () => {
-    console.log('syncCurrentLogbooks started');
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    
-    console.log(
-      'syncCurrentLogbooks session:',
-      session?.user ? 'authenticated' : 'no user',
+    if (cloudStartupInProgress) return;
+    cloudStartupInProgress = true;
+
+try {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!active || !session?.user) return;
+
+  const localLogbooks = loadLogbooks();
+
+  // Existing local data wins. Never overwrite it automatically.
+  if (localLogbooks.length > 0) {
+    const syncResult = await syncLogbooksToSupabase(localLogbooks);
+
+    if (!syncResult.ok) {
+      console.error(
+        'Supabase logbook sync failed:',
+        syncResult.error,
+      );
+    }
+
+    return;
+  }
+
+  // No local data: check the cloud before creating anything.
+  const cloudLogbooks = await loadLogbooksFromSupabase();
+
+  if (!cloudLogbooks.ok) {
+    console.error(
+      'Supabase cloud logbook read failed:',
+      cloudLogbooks.error,
     );
+    return;
+  }
+
+  // Cloud data exists: download every logbook and its QSOs.
+  if (cloudLogbooks.logbooks.length > 0) {
+    const recordsByLogbookId: Record<string, RdiLogRecord[]> = {};
+
+    for (const cloudLogbook of cloudLogbooks.logbooks) {
+      const cloudRecords = await loadQsoRecordsFromSupabase(
+        cloudLogbook.id,
+      );
+
+      if (!cloudRecords.ok) {
+        console.error(
+          'Supabase cloud QSO read failed:',
+          cloudRecords.error,
+        );
+        return;
+      }
+
+      recordsByLogbookId[cloudLogbook.id] =
+        cloudRecords.records;
+    }
+
+    const restoreResult = restoreCloudDataToLocal(
+      cloudLogbooks.logbooks,
+      recordsByLogbookId,
+    );
+
+    if (!restoreResult.ok) {
+      console.error(
+        'Cloud restore failed:',
+        restoreResult.error,
+      );
+      return;
+    }
+
+    if (restoreResult.restored) {
+      console.log(
+        `Cloud restore complete: ${restoreResult.logbooksRestored} logbook(s), ${restoreResult.recordsRestored} QSO(s).`,
+      );
+
+      refreshLogbooks();
+    }
+
+    return;
+  }
+
+  // Brand-new user: no local data and no cloud data.
+  ensureDefaultLogbook();
+  refreshLogbooks();
+    } finally {
+      cloudStartupInProgress = false;
+    }
+  };
     
     if (!active || !session?.user) return;
 
