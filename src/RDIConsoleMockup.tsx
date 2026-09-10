@@ -451,11 +451,6 @@ export default function RDIConsoleMockup({
     }
   });
 
-  const [clusterState, setClusterState] = useState<ClusterLoginState>('DISCONNECTED');
-  const [clusterMessage, setClusterMessage] = useState('ClusterDX is not connected.');
-  const [clusterLastLoginAt, setClusterLastLoginAt] = useState<string | null>(null);
-  const [clusterLastFetchAt, setClusterLastFetchAt] = useState<string | null>(null);
-  const [clusterLastError, setClusterLastError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState('');
   const [saveMessageTone, setSaveMessageTone] = useState<'success' | 'error'>('success');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
