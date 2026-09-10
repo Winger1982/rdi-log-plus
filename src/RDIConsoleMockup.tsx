@@ -1529,9 +1529,9 @@ applyStatusPayload(payload);
     setShowWelcomeOverlay(false);
   };
 
-  const handleOpenClusterDxSignup = () => {
-    window.open('https://clusterdx.org/auth-register.php', '_blank', 'noopener,noreferrer');
-  };
+  const handleOpenCrxSignup = () => {
+  window.open('https://dxcb.crx.cloud/', '_blank', 'noopener,noreferrer');
+};
 
   if (authLoading) {
   return (
@@ -1696,7 +1696,7 @@ if (!authUser) {
             >
               <div style={{ ...labelStyle, marginBottom: '10px' }}>Get Started</div>
               <div style={{ display: 'grid', gap: '8px', fontSize: '0.94rem', lineHeight: 1.7 }}>
-                <div>1. Create your free ClusterDX account if needed</div>
+                <div>1. Create your free CRX 11m account and obtain your API key</div>
                 <div>2. Open Setup and enter your station details</div>
                 <div>3. Choose your map style</div>
                 <div>4. Save your settings</div>
@@ -1742,8 +1742,8 @@ if (!authUser) {
               </label>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenClusterDxSignup}>
-                  Join ClusterDX
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
+                  Open CRX 11m
                 </button>
                 <button type="button" style={primaryButtonStyle} onClick={handleCloseWelcomeOverlay}>
                   Get Started
