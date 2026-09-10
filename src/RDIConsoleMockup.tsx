@@ -120,7 +120,6 @@ type EditContactErrors = Partial<Record<keyof EditContactForm, string>>;
 
 type SetupDraftSnapshot = {
   profileDraft: StationProfile;
-  clusterDraft: ClusterSettings;
 };
 
 type RecoveryMode = 'NONE' | 'PASSWORD_RECOVERY';
@@ -429,28 +428,6 @@ export default function RDIConsoleMockup({
     }
   });
 
-  const [clusterSettings, setClusterSettings] = useState<ClusterSettings>(() => {
-    if (typeof window === 'undefined') return DEFAULT_CLUSTER_SETTINGS;
-    try {
-      const saved = window.localStorage.getItem(CLUSTER_STORAGE_KEY);
-      return saved ? { ...DEFAULT_CLUSTER_SETTINGS, ...JSON.parse(saved) } : DEFAULT_CLUSTER_SETTINGS;
-    } catch {
-      return DEFAULT_CLUSTER_SETTINGS;
-    }
-  });
-
-    const [clusterDraft, setClusterDraft] = useState<ClusterSettings>(() => {
-    if (typeof window === 'undefined') return clusterSettings;
-    try {
-      const savedDraft = window.localStorage.getItem(SETUP_DRAFT_STORAGE_KEY);
-      if (!savedDraft) return clusterSettings;
-      const parsed = JSON.parse(savedDraft) as Partial<SetupDraftSnapshot>;
-      return parsed.clusterDraft ? { ...clusterSettings, ...parsed.clusterDraft } : clusterSettings;
-    } catch {
-      return clusterSettings;
-    }
-  });
-
   const [saveMessage, setSaveMessage] = useState('');
   const [saveMessageTone, setSaveMessageTone] = useState<'success' | 'error'>('success');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -628,13 +605,12 @@ export default function RDIConsoleMockup({
         SETUP_DRAFT_STORAGE_KEY,
         JSON.stringify({
           profileDraft,
-          clusterDraft,
         } satisfies SetupDraftSnapshot),
       );
     } catch {
       // ignore draft save failures
     }
-  }, [profileDraft, clusterDraft]);
+  }, [profileDraft]);
 
   useEffect(() => {
     if (!saveMessage) return;
