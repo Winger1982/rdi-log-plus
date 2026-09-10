@@ -1650,8 +1650,8 @@ if (!authUser) {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenClusterDxSignup}>
-                  Join ClusterDX
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
+                  Open Crx 11m
                 </button>
                 <button type="button" style={compactButtonStyle} onClick={() => setShowQuickStart(false)}>
                   Close
@@ -1670,8 +1670,8 @@ if (!authUser) {
                 fontSize: '0.95rem',
               }}
             >
-              <strong>Before you begin:</strong> create your free ClusterDX account if you do not already have one,
-              then return to the app to complete Setup and connect the live features.
+              <strong>Before you begin:</strong> create your free Crx 11m account and obtain your API key,
+              then return to the app to complete Setup.
             </div>
 
             <div
@@ -1687,12 +1687,12 @@ if (!authUser) {
             >
               <div style={{ ...labelStyle, marginBottom: '10px' }}>Quick Start</div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                <div>1. Join ClusterDX for free if you do not already have an account.</div>
+                <div>1. Create your free Crx 11m account and obtain your API key.</div>
                 <div>2. Open <strong>Setup</strong> and enter your operator name, callsign, and grid square.</div>
                 <div>3. Choose your <strong>Station Mode</strong>, <strong>Distance Units</strong>, and <strong>Map Theme</strong>.</div>
                 <div>4. Enter your <strong>Latitude</strong> and <strong>Longitude</strong> to enable live weather.</div>
                 <div>5. Save your settings.</div>
-                <div>6. Enter your ClusterDX login details, then use <strong>Connect</strong> and <strong>Check Status</strong>.</div>
+                <div>6. Keep your CRX API key ready for the CRX Connection section in Setup.</div>
                 <div>7. Use <strong>Add QSO</strong>, <strong>Quick Presets</strong>, <strong>Find Contact</strong>, and <strong>Edit Contacts</strong> to explore the app.</div>
                 <div>8. Close and reopen the app later to confirm your settings remain saved.</div>
               </div>
