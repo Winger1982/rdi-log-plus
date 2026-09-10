@@ -1217,22 +1217,12 @@ export default function RDIConsoleMockup({
       longitude: profileDraft.longitude.trim(),
     };
 
-    const cleanedCluster: ClusterSettings = {
-      clusterName: clusterDraft.clusterName.trim() || 'ClusterDX',
-      username: clusterDraft.username.trim(),
-      password: clusterDraft.password,
-      rememberMe: clusterDraft.rememberMe,
-    };
-
     try {
       window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cleanedProfile));
-      window.localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(cleanedCluster));
       window.localStorage.removeItem(SETUP_DRAFT_STORAGE_KEY);
       setProfile(cleanedProfile);
-      setClusterSettings(cleanedCluster);
       setProfileDraft(cleanedProfile);
-      setClusterDraft(cleanedCluster);
-
+      
       const nowLabel = new Date().toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
@@ -1242,7 +1232,7 @@ export default function RDIConsoleMockup({
       setLastSavedAt(nowLabel);
       setSaveMessage('Settings saved successfully.');
       setSaveMessageTone('success');
-      void logActivity('setup_saved', 'Saved console and cluster settings.');
+      void logActivity('setup_saved', 'Saved console settings.');
     } catch {
       setSaveMessage('Settings could not be saved locally.');
       setSaveMessageTone('error');
