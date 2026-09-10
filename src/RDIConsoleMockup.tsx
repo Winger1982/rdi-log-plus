@@ -1288,37 +1288,8 @@ applyStatusPayload(payload);
       }));
     }
   }, []);
-
-  const fetchPropagation = useCallback(async () => {
-    try {
-      const response = await fetch(`${BRIDGE_BASE_URL}/api/propagation`);
-      const payload = (await response.json()) as PropagationApiResponse;
-
-      if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.error || 'Propagation fetch failed.');
-      }
-
-      setPropagation({
-        dayCondition: payload.dayCondition || 'Unknown',
-        nightCondition: payload.nightCondition || 'Unknown',
-        solarFlux: payload.solarFlux || '—',
-        sunspots: payload.sunspots || '—',
-        aIndex: payload.aIndex || '—',
-        kIndex: payload.kIndex || '—',
-        aurora: payload.aurora || '—',
-        updatedAt: payload.updatedAt || null,
-        sourceUrl: payload.sourceUrl || PROPAGATION_SOURCE_FALLBACK,
-        error: null,
-      });
-    } catch (error) {
-      setPropagation((prev) => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Propagation fetch failed.',
-      }));
-    }
-  }, []);
-
-  const saveSetup = () => {
+  
+    const saveSetup = () => {
     const cleanedProfile: StationProfile = {
       operatorName: profileDraft.operatorName.trim() || DEFAULT_PROFILE.operatorName,
       callsign: profileDraft.callsign.trim().toUpperCase() || DEFAULT_PROFILE.callsign,
@@ -1377,15 +1348,7 @@ applyStatusPayload(payload);
 
     return () => window.clearInterval(interval);
   }, [profile.latitude, profile.longitude, fetchWeather]);
-
-  useEffect(() => {
-    void fetchPropagation();
-    const interval = window.setInterval(() => {
-      void fetchPropagation();
-    }, 15 * 60 * 1000);
-
-    return () => window.clearInterval(interval);
-  }, [fetchPropagation]);
+  
 
   const headerBadgeStyle = (bg: string, border: string, color: string): CSSProperties => ({
     ...compactButtonStyle,
