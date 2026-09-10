@@ -1590,7 +1590,7 @@ if (!authUser) {
               </label>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCRXSignup}>
                   Open CRX 11m
                 </button>
                 <button type="button" style={primaryButtonStyle} onClick={handleCloseWelcomeOverlay}>
@@ -1650,8 +1650,8 @@ if (!authUser) {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
-                  Open Crx 11m
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCRXSignup}>
+                  Open CRX 11m
                 </button>
                 <button type="button" style={compactButtonStyle} onClick={() => setShowQuickStart(false)}>
                   Close
@@ -1670,7 +1670,7 @@ if (!authUser) {
                 fontSize: '0.95rem',
               }}
             >
-              <strong>Before you begin:</strong> create your free Crx 11m account and obtain your API key,
+              <strong>Before you begin:</strong> create your free CRX 11m account and obtain your API key,
               then return to the app to complete Setup.
             </div>
 
@@ -1687,7 +1687,7 @@ if (!authUser) {
             >
               <div style={{ ...labelStyle, marginBottom: '10px' }}>Quick Start</div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                <div>1. Create your free Crx 11m account and obtain your API key.</div>
+                <div>1. Create your free CRX 11m account and obtain your API key.</div>
                 <div>2. Open <strong>Setup</strong> and enter your operator name, callsign, and grid square.</div>
                 <div>3. Choose your <strong>Station Mode</strong>, <strong>Distance Units</strong>, and <strong>Map Theme</strong>.</div>
                 <div>4. Enter your <strong>Latitude</strong> and <strong>Longitude</strong> to enable live weather.</div>
