@@ -2955,76 +2955,7 @@ if (!authUser) {
                 </div>
               </div>
 
-              <div style={{ ...statCardStyle, display: 'grid', gap: '12px' }}>
-                <div style={{ fontSize: '1.02rem', fontWeight: 700 }}>Bridge Login Settings</div>
-
-                <div>
-                  <div style={labelStyle}>Cluster Name</div>
-                  <input
-                    type="text"
-                    value={clusterDraft.clusterName}
-                    onChange={(event) =>
-                      setClusterDraft((prev) => ({ ...prev, clusterName: event.target.value }))
-                    }
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <div style={labelStyle}>Username</div>
-                  <input
-                    type="text"
-                    value={clusterDraft.username}
-                    onChange={(event) =>
-                      setClusterDraft((prev) => ({ ...prev, username: event.target.value }))
-                    }
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <div style={labelStyle}>Password</div>
-                  <input
-                    type="password"
-                    value={clusterDraft.password}
-                    onChange={(event) =>
-                      setClusterDraft((prev) => ({ ...prev, password: event.target.value }))
-                    }
-                    style={inputStyle}
-                  />
-                </div>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    color: '#d7e3f1',
-                    fontSize: '0.92rem',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={clusterDraft.rememberMe}
-                    onChange={(event) =>
-                      setClusterDraft((prev) => ({ ...prev, rememberMe: event.target.checked }))
-                    }
-                  />
-                  Remember me
-                </label>
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <button type="button" style={saveSetupButtonStyle} onClick={saveSetup}>
-                    {saveMessage && saveMessageTone === 'success' ? 'Saved' : 'Save Credentials'}
-                  </button>
-                  <button type="button" style={primaryButtonStyle} onClick={() => void connectCluster()}>
-                    {clusterState === 'CONNECTING' ? 'Connecting...' : 'Connect'}
-                  </button>
-                  <button type="button" style={compactButtonStyle} onClick={() => void checkClusterStatus()}>
-                    Check Status
-                  </button>
-                </div>
-              </div>
+              
             </div>
 
             <div
@@ -3039,21 +2970,7 @@ if (!authUser) {
                 gap: '6px',
               }}
             >
-              <div>
-                <strong>Status:</strong> {clusterBadge.label}
-              </div>
-              <div>
-                <strong>Message:</strong> {clusterMessage}
-              </div>
-              <div>
-                <strong>Last Login:</strong> {formatDateTime(clusterLastLoginAt)}
-              </div>
-              <div>
-                <strong>Last Fetch:</strong> {formatDateTime(clusterLastFetchAt)}
-              </div>
-              <div>
-                <strong>Last Error:</strong> {clusterLastError || '—'}
-              </div>
+              
               <div>
                 <strong>Weather:</strong> {weather.summaryMessage}
               </div>
