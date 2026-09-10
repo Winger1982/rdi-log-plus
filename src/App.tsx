@@ -3,7 +3,6 @@ import type { CSSProperties, ChangeEvent, FormEvent } from 'react';
 import type { Logbook } from './lib/logbook-types';
 import type { RdiLogRecord } from './lib/types';
 import {
-  ensureDefaultLogbook,
   loadLogbooks,
   getActiveLogbookId,
   setActiveLogbookId,
@@ -349,17 +348,31 @@ export default function App() {
   const [importNotice, setImportNotice] = useState('');
 
   const refreshLogbooks = () => {
-    const ensured = ensureDefaultLogbook();
-    const books = loadLogbooks();
-    const activeId = getActiveLogbookId();
-    const active = books.find((book) => book.id === activeId) || ensured;
+  const books = loadLogbooks();
 
-    setLogbooks(books);
-    setActiveLogbook(active);
-    setRecords(loadResilientRecords(active.id));
-    
-    void syncLogbooksToSupabase(books);
-  };
+  if (books.length === 0) {
+    setLogbooks([]);
+    setActiveLogbook(null);
+    setRecords([]);
+    return;
+  }
+
+  const activeId = getActiveLogbookId();
+  const active =
+    books.find((book) => book.id === activeId) ||
+    books.find((book) => !book.archived) ||
+    books[0];
+
+  if (activeId !== active.id) {
+    setActiveLogbookId(active.id);
+  }
+
+  setLogbooks(books);
+  setActiveLogbook(active);
+  setRecords(loadResilientRecords(active.id));
+
+  void syncLogbooksToSupabase(books);
+};
 
   useEffect(() => {
     refreshLogbooks();
