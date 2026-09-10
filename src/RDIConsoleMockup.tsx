@@ -2800,7 +2800,7 @@ if (!authUser) {
                 flexWrap: 'wrap',
               }}
             >
-              <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>Console + Cluster Settings</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>Console Settings</div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button type="button" style={saveSetupButtonStyle} onClick={saveSetup}>
