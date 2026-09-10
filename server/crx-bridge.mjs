@@ -53,8 +53,9 @@ function getApiKey() {
   return apiKey;
 }
 
-async function crxRequest(query, extra = {}) {
-  const apiKey = getApiKey();
+async function crxRequest(query, extra = {}, apiKeyOverride = '') {
+  const apiKey =
+    String(apiKeyOverride || '').trim() || getApiKey();
 
   const response = await crxClient.post('', {
     req: {
@@ -105,6 +106,35 @@ app.get('/api/crx/health', async (_req, res) => {
     });
   }
 });
+
+app.post('/api/crx/test-key', async (req, res) => {
+  try {
+    const apiKey = String(req.body?.apiKey || '').trim();
+
+    if (!apiKey) {
+      return res.status(400).json({
+        ok: false,
+        error: 'CRX API key is required.',
+      });
+    }
+
+    await crxRequest('health_check', {}, apiKey);
+
+    return res.json({
+      ok: true,
+      message: 'CRX API key accepted.',
+    });
+  } catch (error) {
+    return res.status(401).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'CRX API key test failed.',
+    });
+  }
+});
+
 app.get('/api/crx/spots-test', async (_req, res) => {
   try {
     const data = await crxRequest('get_spots/11m/10', {
