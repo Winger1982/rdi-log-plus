@@ -199,6 +199,75 @@ export function exportAllLogbooks(): LogbookWithRecords[] {
   }));
 }
 
+export function restoreCloudDataToLocal(
+  cloudLogbooks: Logbook[],
+  recordsByLogbookId: Record<string, RdiLogRecord[]>,
+) {
+  const existingLogbooks = loadLogbooks();
+
+  if (existingLogbooks.length > 0) {
+    return {
+      ok: false,
+      restored: false,
+      logbooksRestored: 0,
+      recordsRestored: 0,
+      error: 'Local logbooks already exist. Restore was not performed.',
+    };
+  }
+
+  if (cloudLogbooks.length === 0) {
+    return {
+      ok: true,
+      restored: false,
+      logbooksRestored: 0,
+      recordsRestored: 0,
+      error: null,
+    };
+  }
+
+  try {
+    let recordsRestored = 0;
+
+    for (const logbook of cloudLogbooks) {
+      const records = recordsByLogbookId[logbook.id] ?? [];
+
+      localStorage.setItem(
+        getRecordStorageKey(logbook.id),
+        JSON.stringify(records),
+      );
+
+      recordsRestored += records.length;
+    }
+
+    saveLogbooks(cloudLogbooks);
+
+    const firstActiveLogbook =
+      cloudLogbooks.find((logbook) => !logbook.archived) ??
+      cloudLogbooks[0];
+
+    setActiveLogbookId(firstActiveLogbook.id);
+
+    return {
+      ok: true,
+      restored: true,
+      logbooksRestored: cloudLogbooks.length,
+      recordsRestored,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      restored: false,
+      logbooksRestored: 0,
+      recordsRestored: 0,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to restore cloud data locally.',
+    };
+  }
+}
+
 export function ensureDefaultLogbook(): Logbook {
   const books = loadLogbooks();
 
