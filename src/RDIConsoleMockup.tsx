@@ -12,7 +12,6 @@ type StationMode = 'HOME' | 'PORTABLE' | 'MOBILE';
 type DistanceUnit = 'KM' | 'MI';
 type DataMode = 'OFFLINE' | 'ONLINE';
 type MapTheme = 'LIGHT' | 'DARK';
-type ClusterLoginState = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
 type StationProfile = {
   operatorName: string;
@@ -55,24 +54,6 @@ type ToolPreset = {
   label: string;
   frequency: string;
   mode: string;
-};
-
-type ClusterSettings = {
-  clusterName: string;
-  username: string;
-  password: string;
-  rememberMe: boolean;
-};
-
-type ClusterStatusPayload = {
-  ok?: boolean;
-  bridge?: string;
-  loggedIn?: boolean;
-  lastLoginAt?: string | null;
-  lastFetchAt?: string | null;
-  lastError?: string | null;
-  loginUrl?: string;
-  spotsUrl?: string;
 };
 
 type OpenMeteoResponse = {
@@ -143,16 +124,13 @@ type RDIConsoleMockupProps = {
 
 type SortField = 'callsign' | 'date' | 'time' | 'frequency' | 'mode';
 
-const BRIDGE_BASE_URL = 'https://rdi-log-plus-bridge.onrender.com';
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
-const CLUSTER_STORAGE_KEY = 'rdi.console.cluster';
 const SETUP_DRAFT_STORAGE_KEY = 'rdi.console.setupDraft';
 const WELCOME_OVERLAY_STORAGE_KEY = 'rdi.console.hideWelcomeOverlay';
 const COORDINATE_HELP_URL = 'https://gps-coordinates.org/';
 const RDI_LOGO_SRC = '/rdi-logo.png';
 const PROPAGATION_SOURCE_FALLBACK = 'https://www.dxproof.com/propagation_46860.asp';
 const QSO_PAGE_SIZE = 10;
-
 const MIN_FREQUENCY_MHZ = 26.0;
 const MAX_FREQUENCY_MHZ = 27.999;
 
@@ -165,13 +143,6 @@ const DEFAULT_PROFILE: StationProfile = {
   mapTheme: 'LIGHT',
   latitude: '',
   longitude: '',
-};
-
-const DEFAULT_CLUSTER_SETTINGS: ClusterSettings = {
-  clusterName: 'ClusterDX',
-  username: '',
-  password: '',
-  rememberMe: true,
 };
 
 const DEFAULT_WEATHER: StationWeather = {
