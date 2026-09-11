@@ -3138,6 +3138,7 @@ if (!authUser) {
               >
                 <RDILiveMap
                   dataMode={dataMode}
+                  crxApiKey={crxKeyStatus === 'CONNECTED' ? crxApiKey : ''}
                   mapTheme={profile.mapTheme === 'DARK' ? 'dark' : 'light'}
                   stationProfile={{
                     operatorName: profile.operatorName,
