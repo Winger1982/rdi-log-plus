@@ -23,6 +23,24 @@ const ALLOWED_ORIGINS = [
 
 const CRX_API_URL =
   process.env.CRX_API_URL || 'https://s.crx.cloud/api/';
+const SUPABASE_URL = String(
+  process.env.SUPABASE_URL || '',
+).trim();
+
+const SUPABASE_SECRET_KEY = String(
+  process.env.SUPABASE_SECRET_KEY || '',
+).trim();
+
+const supabaseAdmin = createClient(
+  SUPABASE_URL,
+  SUPABASE_SECRET_KEY,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  },
+);
 
 app.use(
   cors({
