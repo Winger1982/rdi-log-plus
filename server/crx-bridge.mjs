@@ -167,6 +167,33 @@ async function getAuthenticatedUserId(req) {
   return user.id;
 }
 
+async function saveEncryptedCrxCredential(userId, apiKey) {
+  const encrypted = encryptCrxApiKey(apiKey);
+  const now = new Date().toISOString();
+
+  const { error } = await supabaseAdmin
+    .from('crx_credentials')
+    .upsert(
+      {
+        user_id: userId,
+        encrypted_api_key: encrypted.encryptedApiKey,
+        iv: encrypted.iv,
+        auth_tag: encrypted.authTag,
+        last_verified_at: now,
+        updated_at: now,
+      },
+      {
+        onConflict: 'user_id',
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      `Unable to save CRX credential: ${error.message}`,
+    );
+  }
+}
+
 async function crxRequest(query, extra = {}, apiKeyOverride = '') {
   const apiKey =
     String(apiKeyOverride || '').trim() || getApiKey();
