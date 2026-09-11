@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+} from 'node:crypto';
 
 dotenv.config();
 
@@ -51,6 +56,71 @@ function getApiKey() {
   }
 
   return apiKey;
+}
+
+function getEncryptionKey() {
+  const encodedKey = String(
+    process.env.CRX_ENCRYPTION_KEY || '',
+  ).trim();
+
+  if (!encodedKey) {
+    throw new Error('CRX_ENCRYPTION_KEY is not configured.');
+  }
+
+  const key = Buffer.from(encodedKey, 'base64');
+
+  if (key.length !== 32) {
+    throw new Error(
+      'CRX_ENCRYPTION_KEY must decode to exactly 32 bytes.',
+    );
+  }
+
+  return key;
+}
+
+function encryptCrxApiKey(apiKey) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv(
+    'aes-256-gcm',
+    getEncryptionKey(),
+    iv,
+  );
+
+  const encrypted = Buffer.concat([
+    cipher.update(apiKey, 'utf8'),
+    cipher.final(),
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return {
+    encryptedApiKey: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  };
+}
+
+function decryptCrxApiKey({
+  encryptedApiKey,
+  iv,
+  authTag,
+}) {
+  const decipher = createDecipheriv(
+    'aes-256-gcm',
+    getEncryptionKey(),
+    Buffer.from(iv, 'base64'),
+  );
+
+  decipher.setAuthTag(Buffer.from(authTag, 'base64'));
+
+  const decrypted = Buffer.concat([
+    decipher.update(
+      Buffer.from(encryptedApiKey, 'base64'),
+    ),
+    decipher.final(),
+  ]);
+
+  return decrypted.toString('utf8');
 }
 
 async function crxRequest(query, extra = {}, apiKeyOverride = '') {
