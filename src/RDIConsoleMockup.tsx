@@ -404,6 +404,13 @@ export default function RDIConsoleMockup({
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [weather, setWeather] = useState<StationWeather>(DEFAULT_WEATHER);
   const [propagation, setPropagation] = useState<PropagationData>(DEFAULT_PROPAGATION);
+  const [crxApiKey, setCrxApiKey] = useState('');
+  const [crxKeyStatus, setCrxKeyStatus] = useState<
+    'NOT_TESTED' | 'TESTING' | 'CONNECTED' | 'ERROR'
+  >('NOT_TESTED');
+  const [crxKeyMessage, setCrxKeyMessage] = useState(
+    'Enter your CRX API key, then test the connection.',
+  );
 
   const logActivity = useCallback(
     async (eventName: string, eventDetail?: string, userIdOverride?: string) => {
@@ -422,6 +429,57 @@ export default function RDIConsoleMockup({
     },
     [authUser],
   );
+
+  const handleTestCrxKey = async () => {
+  const apiKey = crxApiKey.trim();
+
+  if (!apiKey) {
+    setCrxKeyStatus('ERROR');
+    setCrxKeyMessage('Enter your CRX API key first.');
+    return;
+  }
+
+  setCrxKeyStatus('TESTING');
+  setCrxKeyMessage('Testing CRX connection…');
+
+  try {
+    const response = await fetch(
+      'https://rdi-log-plus-crx-bridge.onrender.com/api/crx/test-key',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKey }),
+      },
+    );
+
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      message?: string;
+      error?: string;
+    };
+
+    if (!response.ok || payload.ok !== true) {
+      throw new Error(
+        payload.error || 'CRX API key was not accepted.',
+      );
+    }
+
+    setCrxKeyStatus('CONNECTED');
+    setCrxKeyMessage(
+      payload.message || 'CRX connection successful.',
+    );
+  } catch (error) {
+    setCrxKeyStatus('ERROR');
+    setCrxKeyMessage(
+      error instanceof Error
+        ? error.message
+        : 'Unable to test CRX API key.',
+    );
+  }
+};
+  
   useEffect(() => {
     if (!supabase) {
       setAuthError('Supabase is not configured.');
@@ -2762,7 +2820,83 @@ if (!authUser) {
                   </a>
                 </div>
               </div>
+              <div style={{ ...statCardStyle, display: 'grid', gap: '12px' }}>
+  <div style={{ fontSize: '1.02rem', fontWeight: 700 }}>CRX Connection</div>
 
+  <div
+    style={{
+      color: '#cfe0f4',
+      fontSize: '0.9rem',
+      lineHeight: 1.6,
+    }}
+  >
+    Enter your personal CRX 11m API key and test the connection.
+    The key is used only for this test and is not saved in your browser.
+  </div>
+
+  <div>
+    <div style={labelStyle}>CRX API Key</div>
+    <input
+      type="password"
+      value={crxApiKey}
+      onChange={(event) => {
+        setCrxApiKey(event.target.value);
+        setCrxKeyStatus('NOT_TESTED');
+        setCrxKeyMessage('Enter your CRX API key, then test the connection.');
+      }}
+      style={inputStyle}
+      autoComplete="off"
+      placeholder="Enter CRX API key"
+    />
+  </div>
+
+  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+    <button
+      type="button"
+      style={primaryButtonStyle}
+      onClick={() => void handleTestCrxKey()}
+      disabled={crxKeyStatus === 'TESTING'}
+    >
+      {crxKeyStatus === 'TESTING' ? 'Testing…' : 'Test Connection'}
+    </button>
+
+    <button
+      type="button"
+      style={compactButtonStyle}
+      onClick={handleOpenCrxSignup}
+    >
+      Open CRX 11m
+    </button>
+  </div>
+
+  <div
+    style={{
+      padding: '10px 12px',
+      borderRadius: '10px',
+      background:
+        crxKeyStatus === 'CONNECTED'
+          ? 'rgba(22, 163, 74, 0.16)'
+          : crxKeyStatus === 'ERROR'
+            ? 'rgba(185, 28, 28, 0.18)'
+            : 'rgba(255,255,255,0.05)',
+      border:
+        crxKeyStatus === 'CONNECTED'
+          ? '1px solid rgba(74, 222, 128, 0.45)'
+          : crxKeyStatus === 'ERROR'
+            ? '1px solid rgba(248, 113, 113, 0.45)'
+            : '1px solid rgba(255,255,255,0.1)',
+      color:
+        crxKeyStatus === 'CONNECTED'
+          ? '#dcfce7'
+          : crxKeyStatus === 'ERROR'
+            ? '#fee2e2'
+            : '#d7e6f7',
+      fontWeight: 700,
+    }}
+  >
+    {crxKeyMessage}
+  </div>
+</div>
               
             </div>
 
