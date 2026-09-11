@@ -7,6 +7,7 @@ import {
   createDecipheriv,
   randomBytes,
 } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
