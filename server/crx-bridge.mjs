@@ -360,6 +360,7 @@ app.get('/api/spots', async (req, res) => {
     return res.json({
       ok: true,
       source: 'CRX',
+      keySource: apiKey ? 'member' : 'server',
       count: spots.length,
       mappableCount: spots.filter((spot) => spot.hasLocation).length,
       fetchedAt: new Date().toISOString(),
