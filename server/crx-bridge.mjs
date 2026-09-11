@@ -250,6 +250,8 @@ app.get('/api/crx/health', async (_req, res) => {
 
 app.post('/api/crx/test-key', async (req, res) => {
   try {
+    const userId = await getAuthenticatedUserId(req);
+
     const apiKey = String(req.body?.apiKey || '').trim();
 
     if (!apiKey) {
@@ -261,9 +263,11 @@ app.post('/api/crx/test-key', async (req, res) => {
 
     await crxRequest('health_check', {}, apiKey);
 
+    await saveEncryptedCrxCredential(userId, apiKey);
+
     return res.json({
       ok: true,
-      message: 'CRX API key accepted.',
+      message: 'CRX API key accepted and saved securely.',
     });
   } catch (error) {
     return res.status(401).json({
