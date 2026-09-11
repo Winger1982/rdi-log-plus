@@ -443,13 +443,25 @@ export default function RDIConsoleMockup({
   setCrxKeyMessage('Testing CRX connection…');
 
   try {
-    const response = await fetch(
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session?.access_token) {
+    throw new Error(
+      'Your RDI Log Plus session has expired. Please sign in again.',
+    );
+  }
+
+  const response = await fetch(
       'https://rdi-log-plus-crx-bridge.onrender.com/api/crx/test-key',
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${session.access_token}`,
+},
         body: JSON.stringify({ apiKey }),
       },
     );
