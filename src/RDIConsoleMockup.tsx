@@ -2860,13 +2860,20 @@ if (!authUser) {
       {crxKeyStatus === 'TESTING' ? 'Testing…' : 'Test Connection'}
     </button>
 
-    <button
-      type="button"
-      style={compactButtonStyle}
-      onClick={handleOpenCrxSignup}
-    >
-      Open CRX 11m
-    </button>
+    <a
+      href="https://dxcb.crx.cloud/"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...compactButtonStyle,
+      textDecoration: 'none',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    Open CRX 11m
+  </a>
   </div>
 
   <div
