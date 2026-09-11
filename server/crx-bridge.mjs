@@ -338,6 +338,7 @@ app.get('/api/crx/spots-normalized-test', async (_req, res) => {
 });
 app.get('/api/spots', async (req, res) => {
   try {
+    const apiKey = String(req.headers['x-crx-api-key'] || '').trim();
     const requestedSize = Number.parseInt(
       String(req.query.loadSize || '25'),
       10,
@@ -347,7 +348,11 @@ app.get('/api/spots', async (req, res) => {
       ? Math.min(100, Math.max(1, requestedSize))
       : 25;
 
-    const data = await crxRequest(`get_spots_on_map/11m/${loadSize}`);
+    const data = await crxRequest(
+  `get_spots_on_map/11m/${loadSize}`,
+  {},
+  apiKey,
+);
 
     const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
     const spots = rawSpots.map(normalizeCrxSpot);
