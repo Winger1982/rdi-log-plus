@@ -1648,7 +1648,7 @@ if (!authUser) {
               </label>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenCRXSignup}>
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
                   Open CRX 11m
                 </button>
                 <button type="button" style={primaryButtonStyle} onClick={handleCloseWelcomeOverlay}>
@@ -1708,7 +1708,7 @@ if (!authUser) {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button type="button" style={primaryButtonStyle} onClick={handleOpenCRXSignup}>
+                <button type="button" style={primaryButtonStyle} onClick={handleOpenCrxSignup}>
                   Open CRX 11m
                 </button>
                 <button type="button" style={compactButtonStyle} onClick={() => setShowQuickStart(false)}>
