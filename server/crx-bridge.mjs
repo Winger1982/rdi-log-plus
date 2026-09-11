@@ -142,6 +142,31 @@ function decryptCrxApiKey({
   return decrypted.toString('utf8');
 }
 
+async function getAuthenticatedUserId(req) {
+  const authorization = String(
+    req.headers.authorization || '',
+  ).trim();
+
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+
+  if (!match) {
+    throw new Error('Missing Supabase access token.');
+  }
+
+  const accessToken = match[1];
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(accessToken);
+
+  if (error || !user) {
+    throw new Error('Invalid or expired Supabase session.');
+  }
+
+  return user.id;
+}
+
 async function crxRequest(query, extra = {}, apiKeyOverride = '') {
   const apiKey =
     String(apiKeyOverride || '').trim() || getApiKey();
