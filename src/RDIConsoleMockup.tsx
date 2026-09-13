@@ -1585,6 +1585,73 @@ if (!authUser) {
   );
 }
 
+  if (membershipLoading) {
+  return (
+    <div style={shellStyle}>
+      <div
+        style={{
+          maxWidth: '520px',
+          margin: '8vh auto 0',
+          ...panelStyle,
+          textAlign: 'center',
+          display: 'grid',
+          gap: '12px',
+        }}
+      >
+        <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+          RDI Log Plus Early Access
+        </div>
+
+        <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+          Checking your RDI membership…
+        </div>
+      </div>
+    </div>
+  );
+}
+
+  if (!membershipAllowed) {
+  return (
+    <div style={shellStyle}>
+      <div
+        style={{
+          maxWidth: '560px',
+          margin: '8vh auto 0',
+          ...panelStyle,
+          textAlign: 'center',
+          display: 'grid',
+          gap: '14px',
+        }}
+      >
+        <div style={{ fontSize: '1.45rem', fontWeight: 800 }}>
+          RDI Log Plus Early Access
+        </div>
+
+        <div style={{ color: '#bfd0e4', lineHeight: 1.7 }}>
+          This early release is currently available only to approved
+          Radio DX International members with an active RDI callsign.
+        </div>
+
+        <div style={{ color: '#dbeafe', lineHeight: 1.7 }}>
+          If you are an RDI member and believe you should have access,
+          please contact the RDI administrator.
+        </div>
+
+        <div>
+          <button
+            type="button"
+            style={primaryButtonStyle}
+            onClick={() => void handleSignOut()}
+            disabled={authBusy}
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+  
   return (
     <div style={shellStyle}>
 
