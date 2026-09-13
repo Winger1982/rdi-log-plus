@@ -364,10 +364,6 @@ export default function RDILiveMap({
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  if (crxApiKey.trim()) {
-    headers['x-crx-api-key'] = crxApiKey.trim();
-  }
-
   const response = await fetch(
     `${BRIDGE_BASE_URL}/api/spots?loadSize=25`,
     {
