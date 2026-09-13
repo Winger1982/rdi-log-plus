@@ -49,7 +49,6 @@ type RDILiveMapProps = {
   stationProfile?: Partial<StationProfile>;
   clusterSpots?: MapStation[];
   mapTheme?: MapTheme;
-  crxApiKey?: string;
 };
 
 type BridgeSpotsResponse = {
@@ -294,7 +293,6 @@ export default function RDILiveMap({
   stationProfile,
   clusterSpots,
   mapTheme,
-  crxApiKey = '',
 }: RDILiveMapProps) {
   
   const [selectedCallsign, setSelectedCallsign] = useState<string | null>(null);
@@ -401,7 +399,7 @@ export default function RDILiveMap({
     }
 
     void fetchBridgeSpots();
-  }, [dataMode, mapConnected, clusterSpots, crxApiKey]);
+  }, [dataMode, mapConnected, clusterSpots]);
 
   const sourceStations = useMemo(() => {
     if (dataMode === 'ONLINE') {
