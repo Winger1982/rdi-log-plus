@@ -371,6 +371,9 @@ export default function RDIConsoleMockup({
   const [authError, setAuthError] = useState('');
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [membershipLoading, setMembershipLoading] = useState(true);
+  const [membershipAllowed, setMembershipAllowed] = useState(false);
+  const [memberCallsign, setMemberCallsign] = useState('');
   const [hasLoggedAppOpen, setHasLoggedAppOpen] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>('NONE');
   const [recoveryPassword, setRecoveryPassword] = useState('');
@@ -564,6 +567,46 @@ export default function RDIConsoleMockup({
       subscription.unsubscribe();
     };
   }, []);
+ 
+  useEffect(() => {
+  let active = true;
+
+  const checkMembership = async () => {
+    if (!authUser) {
+      setMembershipAllowed(false);
+      setMemberCallsign('');
+      setMembershipLoading(false);
+      return;
+    }
+
+    setMembershipLoading(true);
+
+    const { data, error } = await supabase
+      .from('rdi_members')
+      .select('callsign, active')
+      .eq('user_id', authUser.id)
+      .maybeSingle();
+
+    if (!active) return;
+
+    if (error || !data?.active) {
+      setMembershipAllowed(false);
+      setMemberCallsign('');
+    } else {
+      setMembershipAllowed(true);
+      setMemberCallsign(data.callsign);
+    }
+
+    setMembershipLoading(false);
+  };
+
+  void checkMembership();
+
+  return () => {
+    active = false;
+  };
+}, [authUser]);
+ 
   useEffect(() => {
   let active = true;
 
