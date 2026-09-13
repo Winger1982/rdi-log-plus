@@ -261,7 +261,7 @@ app.post('/api/crx/test-key', async (req, res) => {
       });
     }
 
-    await crxRequest('health_check', {}, apiKey);
+    await crxRequest('get_spots_on_map/11m/1', {}, apiKey);
 
     await saveEncryptedCrxCredential(userId, apiKey);
 
