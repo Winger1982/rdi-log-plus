@@ -167,6 +167,25 @@ async function getAuthenticatedUserId(req) {
   return user.id;
 }
 
+async function requireActiveRdiMember(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('rdi_members')
+    .select('callsign, active')
+    .eq('user_id', userId)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Unable to verify RDI membership: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Active RDI membership is required.');
+  }
+
+  return data.callsign;
+}
+
 async function saveEncryptedCrxCredential(userId, apiKey) {
   const encrypted = encryptCrxApiKey(apiKey);
   const now = new Date().toISOString();
