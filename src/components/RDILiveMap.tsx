@@ -9,6 +9,7 @@ import {
   TileLayer,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { supabase } from '../lib/supabase';
 
 type DistanceUnit = 'KM' | 'MI';
 type DataMode = 'OFFLINE' | 'ONLINE';
@@ -353,11 +354,29 @@ export default function RDILiveMap({
     setFetchError(null);
 
     try {
-      const response = await fetch(`${BRIDGE_BASE_URL}/api/spots?loadSize=25`, {
-  headers: crxApiKey.trim()
-    ? { 'x-crx-api-key': crxApiKey.trim() }
-    : undefined,
-});
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const headers: Record<string, string> = {};
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  if (crxApiKey.trim()) {
+    headers['x-crx-api-key'] = crxApiKey.trim();
+  }
+
+  const response = await fetch(
+    `${BRIDGE_BASE_URL}/api/spots?loadSize=25`,
+    {
+      headers:
+        Object.keys(headers).length > 0
+          ? headers
+          : undefined,
+    },
+  );
       const payload = (await response.json()) as BridgeSpotsResponse;
 
       if (!response.ok || !payload.ok) {
