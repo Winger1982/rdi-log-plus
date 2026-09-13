@@ -294,6 +294,7 @@ app.get('/api/crx/health', async (_req, res) => {
 app.post('/api/crx/test-key', async (req, res) => {
   try {
     const userId = await getAuthenticatedUserId(req);
+    await requireActiveRdiMember(userId);
 
     const apiKey = String(req.body?.apiKey || '').trim();
 
