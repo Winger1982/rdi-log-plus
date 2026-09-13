@@ -528,22 +528,13 @@ app.get('/api/crx/spots-normalized-test', async (_req, res) => {
 
 app.get('/api/spots', async (req, res) => {
   try {
-let apiKey = String(req.headers['x-crx-api-key'] || '').trim();
-let keySource = apiKey ? 'member-header' : 'server';
+const userId = await getAuthenticatedUserId(req);
+await requireActiveRdiMember(userId);
 
-const authorization = String(
-  req.headers.authorization || '',
-).trim();
+const savedApiKey = await loadSavedCrxApiKey(userId);
 
-if (authorization) {
-  const userId = await getAuthenticatedUserId(req);
-  const savedApiKey = await loadSavedCrxApiKey(userId);
-
-  if (savedApiKey) {
-    apiKey = savedApiKey;
-    keySource = 'saved-member';
-  }
-}
+let apiKey = savedApiKey;
+let keySource = savedApiKey ? 'saved-member' : 'server';
     const requestedSize = Number.parseInt(
       String(req.query.loadSize || '25'),
       10,
