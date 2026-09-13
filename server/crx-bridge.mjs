@@ -194,6 +194,30 @@ async function saveEncryptedCrxCredential(userId, apiKey) {
   }
 }
 
+async function loadSavedCrxApiKey(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('crx_credentials')
+    .select('encrypted_api_key, iv, auth_tag')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Unable to load CRX credential: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    return '';
+  }
+
+  return decryptCrxApiKey({
+    encryptedApiKey: data.encrypted_api_key,
+    iv: data.iv,
+    authTag: data.auth_tag,
+  });
+}
+
 async function crxRequest(query, extra = {}, apiKeyOverride = '') {
   const apiKey =
     String(apiKeyOverride || '').trim() || getApiKey();
