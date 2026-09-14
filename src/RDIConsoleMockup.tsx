@@ -670,9 +670,18 @@ export default function RDIConsoleMockup({
       setMembershipAllowed(false);
       setMemberCallsign('');
     } else {
-      setMembershipAllowed(true);
-      setMemberCallsign(data.callsign);
-    }
+  const trustedCallsign = normalizeCallsign(data.callsign);
+  const loadedProfile = loadProfileForUser(
+    authUser.id,
+    trustedCallsign,
+  );
+
+  setMembershipAllowed(true);
+  setMemberCallsign(trustedCallsign);
+  setProfile(loadedProfile);
+  setProfileDraft(loadedProfile);
+  setProfileStorageUserId(authUser.id);
+}
 
     setMembershipLoading(false);
   };
