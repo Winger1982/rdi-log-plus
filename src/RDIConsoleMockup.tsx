@@ -1366,8 +1366,13 @@ export default function RDIConsoleMockup({
     };
 
     try {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cleanedProfile));
-      window.localStorage.removeItem(SETUP_DRAFT_STORAGE_KEY);
+      window.localStorage.setItem(
+  getProfileStorageKey(profileStorageUserId),
+  JSON.stringify(cleanedProfile),
+);
+window.localStorage.removeItem(
+  getSetupDraftStorageKey(profileStorageUserId),
+);
       setProfile(cleanedProfile);
       setProfileDraft(cleanedProfile);
       
