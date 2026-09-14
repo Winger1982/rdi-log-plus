@@ -186,6 +186,26 @@ async function requireActiveRdiMember(userId) {
   return data.callsign;
 }
 
+async function loadActiveRdiMembers() {
+  const { data, error } = await supabaseAdmin
+    .from('rdi_members')
+    .select('callsign, display_name')
+    .eq('active', true);
+
+  if (error) {
+    throw new Error(
+      `Unable to load active RDI members: ${error.message}`,
+    );
+  }
+
+  return new Map(
+    (data || []).map((member) => [
+      String(member.callsign || '').trim().toUpperCase(),
+      member.display_name || '',
+    ]),
+  );
+}
+
 async function saveEncryptedCrxCredential(userId, apiKey) {
   const encrypted = encryptCrxApiKey(apiKey);
   const now = new Date().toISOString();
