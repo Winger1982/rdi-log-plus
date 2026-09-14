@@ -435,13 +435,18 @@ export default function RDILiveMap({
 
   if (!dxCoords) return null;
 
-        const submitterCoords =
-          station.source === 'CLUSTERDX' && station.submitterGrid
-            ? maidenheadToLatLon(station.submitterGrid)
-            : null;
+  const submitterCoords =
+  station.submitterGrid
+    ? maidenheadToLatLon(station.submitterGrid)
+    : null;
 
-        const lineFrom = submitterCoords ?? myCoords;
-        if (!lineFrom) return null;
+  const isLiveSpot =
+  station.source === 'CRX' || station.source === 'CLUSTERDX';
+
+  const lineFrom =
+  submitterCoords ?? (isLiveSpot ? dxCoords : myCoords);
+
+  if (!lineFrom) return null;
 
         const distance = myCoords ? calculateDistanceKm(myCoords, dxCoords) : 0;
         const bearing = myCoords ? calculateBearing(myCoords, dxCoords) : 0;
