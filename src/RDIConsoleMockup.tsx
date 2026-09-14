@@ -381,6 +381,7 @@ export default function RDIConsoleMockup({
   const [membershipLoading, setMembershipLoading] = useState(true);
   const [membershipAllowed, setMembershipAllowed] = useState(false);
   const [memberCallsign, setMemberCallsign] = useState('');
+  const [profileStorageUserId, setProfileStorageUserId] = useState('');
   const [hasLoggedAppOpen, setHasLoggedAppOpen] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>('NONE');
   const [recoveryPassword, setRecoveryPassword] = useState('');
