@@ -196,15 +196,25 @@ export function saveLogbookRecords(logbookId: string, records: RdiLogRecord[]) {
 
 export function getActiveLogbookId(): string | null {
   migrateLegacyStorage();
-  return localStorage.getItem(ACTIVE_LOGBOOK_KEY);
+
+  const storageKey = getScopedStorageKey(ACTIVE_LOGBOOK_KEY);
+  if (!storageKey) return null;
+
+  return localStorage.getItem(storageKey);
 }
 
 export function setActiveLogbookId(id: string) {
-  localStorage.setItem(ACTIVE_LOGBOOK_KEY, id);
+  const storageKey = getScopedStorageKey(ACTIVE_LOGBOOK_KEY);
+  if (!storageKey) return;
+
+  localStorage.setItem(storageKey, id);
 }
 
 export function clearActiveLogbook() {
-  localStorage.removeItem(ACTIVE_LOGBOOK_KEY);
+  const storageKey = getScopedStorageKey(ACTIVE_LOGBOOK_KEY);
+  if (!storageKey) return;
+
+  localStorage.removeItem(storageKey);
 }
 
 export function exportAllLogbooks(): LogbookWithRecords[] {
