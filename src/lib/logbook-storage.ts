@@ -61,7 +61,9 @@ function migrateLegacyStorage() {
 }
 
 function getRecordStorageKey(logbookId: string): string {
-  return `${LOGBOOK_RECORDS_PREFIX}${logbookId}`;
+  return getScopedStorageKey(
+    `${LOGBOOK_RECORDS_PREFIX}${logbookId}`,
+  );
 }
 
 export function loadLogbooks(): Logbook[] {
@@ -170,8 +172,11 @@ export function deleteLogbook(id: string) {
 export function loadLogbookRecords(logbookId: string): RdiLogRecord[] {
   migrateLegacyStorage();
 
+  const storageKey = getRecordStorageKey(logbookId);
+  if (!storageKey) return [];
+
   try {
-    const raw = localStorage.getItem(getRecordStorageKey(logbookId));
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
@@ -182,8 +187,14 @@ export function loadLogbookRecords(logbookId: string): RdiLogRecord[] {
   }
 }
 
-export function saveLogbookRecords(logbookId: string, records: RdiLogRecord[]) {
-  localStorage.setItem(getRecordStorageKey(logbookId), JSON.stringify(records));
+export function saveLogbookRecords(
+  logbookId: string,
+  records: RdiLogRecord[],
+) {
+  const storageKey = getRecordStorageKey(logbookId);
+  if (!storageKey) return;
+
+  localStorage.setItem(storageKey, JSON.stringify(records));
 
   const books = loadLogbooks();
   const book = books.find((b) => b.id === logbookId);
