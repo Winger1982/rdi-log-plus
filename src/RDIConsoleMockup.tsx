@@ -578,9 +578,11 @@ export default function RDIConsoleMockup({
  
   useEffect(() => {
   let active = true;
+      
+    const checkMembership = async () => {
+  setProfileStorageUserId('');
 
-  const checkMembership = async () => {
-    if (!authUser) {
+  if (!authUser) {  
       setMembershipAllowed(false);
       setMemberCallsign('');
       setMembershipLoading(false);
