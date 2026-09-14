@@ -5,6 +5,7 @@ import type { RdiLogRecord } from './lib/types';
 import {
   ensureDefaultLogbook,
   restoreCloudDataToLocal,
+  setLogbookStorageUserId,
   loadLogbooks,
   getActiveLogbookId,
   setActiveLogbookId,
