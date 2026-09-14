@@ -67,8 +67,11 @@ function getRecordStorageKey(logbookId: string): string {
 export function loadLogbooks(): Logbook[] {
   migrateLegacyStorage();
 
+  const storageKey = getScopedStorageKey(LOGBOOKS_KEY);
+  if (!storageKey) return [];
+
   try {
-    const raw = localStorage.getItem(LOGBOOKS_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
@@ -80,7 +83,10 @@ export function loadLogbooks(): Logbook[] {
 }
 
 function saveLogbooks(books: Logbook[]) {
-  localStorage.setItem(LOGBOOKS_KEY, JSON.stringify(books));
+  const storageKey = getScopedStorageKey(LOGBOOKS_KEY);
+  if (!storageKey) return;
+
+  localStorage.setItem(storageKey, JSON.stringify(books));
 }
 
 export function createLogbook(name: string, template: LogbookTemplate): Logbook {
