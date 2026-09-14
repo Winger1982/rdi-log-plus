@@ -4,6 +4,15 @@ import type { Logbook, LogbookTemplate, LogbookWithRecords } from './logbook-typ
 const LOGBOOKS_KEY = 'rdi-log-plus-logbooks';
 const LOGBOOK_RECORDS_PREFIX = 'rdi-log-plus-logbook-records-';
 const ACTIVE_LOGBOOK_KEY = 'rdi-log-plus-active-logbook';
+let storageUserId = '';
+
+export function setLogbookStorageUserId(userId: string | null) {
+  storageUserId = userId?.trim() ?? '';
+}
+
+function getScopedStorageKey(key: string): string {
+  return storageUserId ? `${key}.${storageUserId}` : '';
+}
 
 const LEGACY_LOGBOOKS_KEY = 'qlog-logbooks';
 const LEGACY_LOGBOOK_RECORDS_PREFIX = 'qlog-logbook-records-';
