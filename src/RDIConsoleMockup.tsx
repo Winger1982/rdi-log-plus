@@ -684,12 +684,17 @@ export default function RDIConsoleMockup({
   }, []);
 
     useEffect(() => {
-    try {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    } catch {
-      // ignore
-    }
-  }, [profile]);
+  if (!profileStorageUserId) return;
+
+  try {
+    window.localStorage.setItem(
+      getProfileStorageKey(profileStorageUserId),
+      JSON.stringify(profile),
+    );
+  } catch {
+    // ignore
+  }
+}, [profile, profileStorageUserId]);
 
        useEffect(() => {
     try {
