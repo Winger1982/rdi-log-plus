@@ -126,6 +126,13 @@ type SortField = 'callsign' | 'date' | 'time' | 'frequency' | 'mode';
 
 const PROFILE_STORAGE_KEY = 'rdi.console.profile';
 const SETUP_DRAFT_STORAGE_KEY = 'rdi.console.setupDraft';
+function getProfileStorageKey(userId: string) {
+  return `${PROFILE_STORAGE_KEY}.${userId}`;
+}
+
+function getSetupDraftStorageKey(userId: string) {
+  return `${SETUP_DRAFT_STORAGE_KEY}.${userId}`;
+}
 const WELCOME_OVERLAY_STORAGE_KEY = 'rdi.console.hideWelcomeOverlay';
 const COORDINATE_HELP_URL = 'https://gps-coordinates.org/';
 const RDI_LOGO_SRC = '/rdi-logo.png';
