@@ -570,8 +570,19 @@ let keySource = savedApiKey ? 'saved-member' : 'server';
   apiKey,
 );
 
-    const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
-    const spots = rawSpots.map(normalizeCrxSpot);
+  const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
+  const rdiMembers = await loadActiveRdiMembers();
+
+  const spots = rawSpots.map((spot) => {
+  const normalizedSpot = normalizeCrxSpot(spot);
+  const isRdiMember = rdiMembers.has(normalizedSpot.callsign);
+
+  return {
+    ...normalizedSpot,
+    isRDI: isRdiMember,
+    isActive: isRdiMember,
+  };
+});
 
     return res.json({
       ok: true,
