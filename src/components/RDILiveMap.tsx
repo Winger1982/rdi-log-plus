@@ -647,7 +647,6 @@ export default function RDILiveMap({
                     <div style={popupCallsignStyle}>
                       {getPrefixFlag(station.callsign)} {station.callsign}
                     </div>
-                    <div><strong>Operator:</strong> {station.operatorName ?? 'Unknown'}</div>
                     <div><strong>Country:</strong> {station.country ?? 'Unknown'}</div>
                     <div><strong>Target grid:</strong> {station.gridSquare}</div>
                     <div><strong>Your grid:</strong> {normalizedGrid}</div>
