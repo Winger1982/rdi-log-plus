@@ -226,6 +226,73 @@ function normalizeCallsign(value: string) {
   return value.trim().toUpperCase();
 }
 
+function loadProfileForUser(
+  userId: string,
+  callsign: string,
+): StationProfile {
+  const trustedCallsign = normalizeCallsign(callsign);
+
+  if (typeof window === 'undefined') {
+    return {
+      ...DEFAULT_PROFILE,
+      callsign: trustedCallsign,
+    };
+  }
+
+  try {
+    const saved = window.localStorage.getItem(
+      getProfileStorageKey(userId),
+    );
+
+    if (saved) {
+      const parsed = JSON.parse(saved) as Partial<StationProfile>;
+
+      return {
+        ...DEFAULT_PROFILE,
+        ...parsed,
+        callsign: trustedCallsign,
+      };
+    }
+
+    const legacy = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+
+    if (legacy) {
+      const parsedLegacy = JSON.parse(
+        legacy,
+      ) as Partial<StationProfile>;
+
+      const legacyProfile: StationProfile = {
+        ...DEFAULT_PROFILE,
+        ...parsedLegacy,
+      };
+
+      if (
+        normalizeCallsign(legacyProfile.callsign) ===
+        trustedCallsign
+      ) {
+        const migratedProfile = {
+          ...legacyProfile,
+          callsign: trustedCallsign,
+        };
+
+        window.localStorage.setItem(
+          getProfileStorageKey(userId),
+          JSON.stringify(migratedProfile),
+        );
+
+        return migratedProfile;
+      }
+    }
+  } catch {
+    // ignore local storage failures
+  }
+
+  return {
+    ...DEFAULT_PROFILE,
+    callsign: trustedCallsign,
+  };
+}
+
 function isValidDateString(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
