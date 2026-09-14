@@ -477,32 +477,6 @@ hasLocation: Boolean(
   };
 }
 
-app.get('/api/crx/spots-normalized-test', async (_req, res) => {
-  try {
-    const data = await crxRequest('get_spots_on_map/11m/10');
-
-    const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
-    const spots = rawSpots.map(normalizeCrxSpot);
-
-    return res.json({
-      ok: true,
-      count: spots.length,
-      mappableCount: spots.filter((spot) => spot.hasLocation).length,
-      fetchedAt: new Date().toISOString(),
-      spots,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'CRX normalized spots test failed.',
-      crxResponse: error?.response?.data ?? null,
-    });
-  }
-});
-
 app.get('/api/spots', async (req, res) => {
   try {
 const userId = await getAuthenticatedUserId(req);
