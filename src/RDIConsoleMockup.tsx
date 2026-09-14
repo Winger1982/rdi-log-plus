@@ -696,18 +696,20 @@ export default function RDIConsoleMockup({
   }
 }, [profile, profileStorageUserId]);
 
-       useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        SETUP_DRAFT_STORAGE_KEY,
-        JSON.stringify({
-          profileDraft,
-        } satisfies SetupDraftSnapshot),
-      );
-    } catch {
-      // ignore draft save failures
-    }
-  }, [profileDraft]);
+      useEffect(() => {
+  if (!profileStorageUserId) return;
+
+  try {
+    window.localStorage.setItem(
+      getSetupDraftStorageKey(profileStorageUserId),
+      JSON.stringify({
+        profileDraft,
+      } satisfies SetupDraftSnapshot),
+    );
+  } catch {
+    // ignore draft save failures
+  }
+}, [profileDraft, profileStorageUserId]); 
 
   useEffect(() => {
     if (!saveMessage) return;
