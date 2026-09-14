@@ -395,7 +395,7 @@ try {
   } = await supabase.auth.getSession();
 
   if (!active || !session?.user) return;
-
+  setLogbookStorageUserId(session.user.id);
   const localLogbooks = loadLogbooks();
 
   // Existing local data wins. Never overwrite it automatically.
