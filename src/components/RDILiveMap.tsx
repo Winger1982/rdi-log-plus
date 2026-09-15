@@ -557,6 +557,7 @@ export default function RDILiveMap({
           style={{ height: '600px', width: '100%' }}
         >
           <TileLayer
+            key={activeMapTheme}
             attribution="&copy; OpenStreetMap contributors"
             className={activeMapTheme === 'dark' ? 'rdi-dark-map-tiles' : ''}
             url={getBaseMapUrl(activeMapTheme)}
