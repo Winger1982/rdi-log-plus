@@ -400,6 +400,8 @@ try {
 
   // Existing local data wins. Never overwrite it automatically.
   if (localLogbooks.length > 0) {
+    refreshLogbooks();
+    
     const syncResult = await syncLogbooksToSupabase(localLogbooks);
 
     if (!syncResult.ok) {
