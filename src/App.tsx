@@ -134,10 +134,11 @@ function persistRecords(logbookId: string, nextRecords: RdiLogRecord[]) {
   });
 }
 
-function mergeImportedRecords(existing: RdiLogRecord[], imported: RdiLogRecord[]): RdiLogRecord[] {
-  const seen = new Map<string, RdiLogRecord>();
-
-  const makeKey = (record: RdiLogRecord) =>
+function mergeImportedRecords(
+  existing: RdiLogRecord[],
+  imported: RdiLogRecord[],
+): RdiLogRecord[] {
+  const makeExactKey = (record: RdiLogRecord) =>
     [
       (record.callsign || '').trim().toUpperCase(),
       (record.date || '').trim(),
@@ -146,8 +147,70 @@ function mergeImportedRecords(existing: RdiLogRecord[], imported: RdiLogRecord[]
       (record.mode || '').trim().toUpperCase(),
     ].join('|');
 
-  for (const record of [...imported, ...existing]) {
-    const key = makeKey(record);
+  const makeLooseKey = (record: RdiLogRecord) =>
+    [
+      (record.callsign || '').trim().toUpperCase(),
+      (record.time || '').trim(),
+      (record.frequency || '').trim(),
+      (record.mode || '').trim().toUpperCase(),
+    ].join('|');
+
+  const existingByExactKey = new Map<string, RdiLogRecord>();
+  const blankDateMatches = new Map<string, RdiLogRecord[]>();
+
+  for (const record of existing) {
+    existingByExactKey.set(makeExactKey(record), record);
+
+    if (!(record.date || '').trim()) {
+      const looseKey = makeLooseKey(record);
+      const matches = blankDateMatches.get(looseKey) || [];
+      matches.push(record);
+      blankDateMatches.set(looseKey, matches);
+    }
+  }
+
+  const consumedExistingIds = new Set<string>();
+  const mergedImported: RdiLogRecord[] = [];
+
+  for (const record of imported) {
+    const exactMatch = existingByExactKey.get(makeExactKey(record));
+
+    if (exactMatch) {
+      consumedExistingIds.add(exactMatch.id);
+      mergedImported.push(exactMatch);
+      continue;
+    }
+
+    const looseMatches = blankDateMatches.get(makeLooseKey(record)) || [];
+
+    if (record.date && looseMatches.length === 1) {
+      const blankDateMatch = looseMatches[0];
+
+      consumedExistingIds.add(blankDateMatch.id);
+
+      mergedImported.push({
+        ...blankDateMatch,
+        date: record.date,
+      });
+
+      continue;
+    }
+
+    mergedImported.push(record);
+  }
+
+  const combined = [
+    ...mergedImported,
+    ...existing.filter(
+      (record) => !consumedExistingIds.has(record.id),
+    ),
+  ];
+
+  const seen = new Map<string, RdiLogRecord>();
+
+  for (const record of combined) {
+    const key = makeExactKey(record);
+
     if (!seen.has(key)) {
       seen.set(key, record);
     }
@@ -156,7 +219,11 @@ function mergeImportedRecords(existing: RdiLogRecord[], imported: RdiLogRecord[]
   return Array.from(seen.values()).sort((a, b) => {
     const aStamp = `${a.date || ''} ${a.time || ''}`;
     const bStamp = `${b.date || ''} ${b.time || ''}`;
-    return bStamp.localeCompare(aStamp, undefined, { numeric: true, sensitivity: 'base' });
+
+    return bStamp.localeCompare(aStamp, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
   });
 }
 
@@ -183,7 +250,19 @@ function isValidDateString(value: string): boolean {
 
 function normalizeDate(value: string | undefined): string {
   const trimmed = (value || '').trim();
-  return isValidDateString(trimmed) ? trimmed : '';
+  if (!trimmed) return '';
+
+  if (isValidDateString(trimmed)) return trimmed;
+
+  const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!dmyMatch) return '';
+
+  const [, day, month, year] = dmyMatch;
+
+  const normalized =
+    `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+  return isValidDateString(normalized) ? normalized : '';
 }
 
 function normalizeTime(value: string | undefined): string {
