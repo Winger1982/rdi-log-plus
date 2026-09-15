@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import {
   createCipheriv,
   createDecipheriv,
@@ -23,6 +24,10 @@ const ALLOWED_ORIGINS = [
 
 const CRX_API_URL =
   process.env.CRX_API_URL || 'https://s.crx.cloud/api/';
+
+const DXPROOF_PROPAGATION_URL =
+  'https://www.dxproof.com/propagation_46860.asp';
+
 const SUPABASE_URL = String(
   process.env.SUPABASE_URL || '',
 ).trim();
@@ -536,10 +541,55 @@ let keySource = savedApiKey ? 'saved-member' : 'server';
     });
   }
 });
+
+async function fetchDxproofDayNight() {
+  const response = await axios.get(DXPROOF_PROPAGATION_URL, {
+    timeout: 15000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0',
+      Accept: 'text/html,application/xhtml+xml',
+    },
+  });
+
+  const html = typeof response.data === 'string' ? response.data : '';
+  if (!html) {
+    throw new Error('DXProof returned empty content.');
+  }
+
+  const $ = cheerio.load(html);
+  const metricBlocks = $('div[style*="border-radius: 5px"]');
+
+  const readBlockValue = (index) =>
+    metricBlocks.eq(index).find('span').last().text().trim();
+
+  return {
+    dayCondition: readBlockValue(0) || 'Unknown',
+    nightCondition: readBlockValue(1) || 'Unknown',
+  };
+}
+
 app.get('/api/propagation-test', async (_req, res) => {
   try {
-    const [fluxResponse, kpResponse, sunspotResponse, auroraResponse] =
-  await Promise.all([
+    const dayNightPromise = fetchDxproofDayNight().catch((error) => {
+  console.error(
+    'DXProof Day/Night fetch failed:',
+    error instanceof Error ? error.message : error,
+  );
+
+  return {
+    dayCondition: 'Unknown',
+    nightCondition: 'Unknown',
+  };
+});
+    const [
+  dayNight,
+  fluxResponse,
+  kpResponse,
+  sunspotResponse,
+  auroraResponse,
+] = await Promise.all([
+  dayNightPromise,
+    
     axios.get('https://services.swpc.noaa.gov/json/f107_cm_flux.json', {
       timeout: 15000,
     }),
@@ -605,6 +655,8 @@ return res.json({
   ok: true,
   source: 'NOAA SWPC',
   fetchedAt: new Date().toISOString(),
+  dayCondition: dayNight.dayCondition,
+  nightCondition: dayNight.nightCondition,
   solarFlux: latestFlux?.flux ?? null,
   solarFluxTime: latestFlux?.time_tag ?? null,
   aIndex: latestKp?.a_running ?? null,
