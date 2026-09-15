@@ -66,3 +66,6 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+.rdi-dark-map-tiles {
+  filter: brightness(0.55) contrast(1.15) saturate(0.75) hue-rotate(180deg);
+}
