@@ -711,8 +711,8 @@ export default function RDIConsoleMockup({
       if (!active) return;
 
       setPropagation({
-        dayCondition: 'Unknown',
-        nightCondition: 'Unknown',
+        dayCondition: String(data.dayCondition ?? 'Unknown'),
+        nightCondition: String(data.nightCondition ?? 'Unknown'),
         solarFlux: String(data.solarFlux ?? '—'),
         sunspots: String(data.sunspots ?? '—'),
         aIndex: String(data.aIndex ?? '—'),
