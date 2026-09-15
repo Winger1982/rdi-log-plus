@@ -3018,6 +3018,8 @@ if (!authUser) {
                       setProfileDraft((prev) => ({ ...prev, longitude: event.target.value }))
                     }
                     style={inputStyle}
+                    name="station-longitude"
+                    autoComplete="off"
                     placeholder="e.g. -75.6972"
                   />
                 </div>
@@ -3065,7 +3067,7 @@ if (!authUser) {
         setCrxKeyMessage('Enter your CRX API key, then test the connection.');
       }}
       style={inputStyle}
-      autoComplete="off"
+      autoComplete="new-password"
       placeholder="Enter CRX API key"
     />
   </div>
