@@ -546,9 +546,19 @@ async function fetchDxproofDayNight() {
   const response = await axios.get(DXPROOF_PROPAGATION_URL, {
     timeout: 15000,
     headers: {
-      'User-Agent': 'Mozilla/5.0',
-      Accept: 'text/html,application/xhtml+xml',
-    },
+  'User-Agent':
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+  Referer: 'https://www.dxproof.com/',
+  Origin: 'https://www.dxproof.com',
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'iframe',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+  'Sec-Fetch-User': '?1',
+   },
   });
 
   const html = typeof response.data === 'string' ? response.data : '';
