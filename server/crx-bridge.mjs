@@ -465,19 +465,15 @@ function normalizeCrxSpot(spot) {
     ),
 latitude: firstValue(
   spot.dx_lat,
-  spot.latitude,
-  spot.lat,
 ),
 
 longitude: firstValue(
   spot.dx_lon,
-  spot.longitude,
-  spot.lon,
 ),
 hasLocation: Boolean(
   gridSquare ||
-  (firstValue(spot.dx_lat, spot.latitude, spot.lat) &&
-   firstValue(spot.dx_lon, spot.longitude, spot.lon))
+  (firstValue(spot.dx_lat) &&
+   firstValue(spot.dx_lon))
 ),
   };
 }
