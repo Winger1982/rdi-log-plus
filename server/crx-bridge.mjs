@@ -543,9 +543,7 @@ longitude: firstValue(
   spot.dx_lon,
 ),
 hasLocation: Boolean(
-  gridSquare ||
-  (firstValue(spot.dx_lat) &&
-   firstValue(spot.dx_lon))
+  gridSquare
 ),
   };
 }
