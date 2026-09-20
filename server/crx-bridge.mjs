@@ -395,6 +395,70 @@ function normalizeUtcTime(spot) {
 
   return raw;
 }
+const CB_DIVISION_COUNTRIES = {
+  1: 'Italy',
+  2: 'United States',
+  3: 'Brazil',
+  4: 'Argentina',
+  5: 'Venezuela',
+  6: 'Colombia',
+  7: 'Netherlands Antilles',
+  8: 'Peru',
+  9: 'Canada',
+  10: 'Mexico',
+  11: 'Puerto Rico',
+  12: 'Uruguay',
+  13: 'Germany',
+  14: 'France',
+  15: 'Switzerland',
+  16: 'Belgium',
+  17: 'Hawaii',
+  18: 'Greece',
+  19: 'Netherlands',
+  20: 'Norway',
+  21: 'Sweden',
+  22: 'French Guiana',
+  23: 'Jamaica',
+  24: 'Panama',
+  25: 'Japan',
+  26: 'England',
+  27: 'Iceland',
+  29: 'Ireland',
+  30: 'Spain',
+  31: 'Portugal',
+  32: 'Chile',
+  33: 'Alaska',
+  34: 'Canary Islands',
+  35: 'Austria',
+  36: 'San Marino',
+  41: 'New Zealand',
+  43: 'Australia',
+  47: 'Denmark',
+  50: 'Russia',
+  56: 'Finland',
+  68: 'Northern Ireland',
+  73: 'Suriname',
+  79: 'Philippines',
+  90: 'Crete',
+  91: 'Indonesia',
+  93: 'Malta',
+  104: 'Corsica',
+  108: 'Scotland',
+  109: 'Hungary',
+  112: 'Lebanon',
+  116: 'Turkey',
+  117: 'Cyprus',
+  118: 'Gambia',
+  161: 'Poland',
+};
+
+function countryFromCbCallsign(callsign = '') {
+  const match = String(callsign).trim().toUpperCase().match(/^(\d{1,3})/);
+  if (!match) return '';
+
+  const division = Number(match[1]);
+  return CB_DIVISION_COUNTRIES[division] || '';
+}
 
 function normalizeCrxSpot(spot) {
   const gridSquare = firstValue(
@@ -422,11 +486,19 @@ function normalizeCrxSpot(spot) {
 
     submitterGrid,
 
-    country: firstValue(
-      spot.country_dx,
-      spot.dx_country,
-      spot.country,
+    country:
+  firstValue(
+    spot.country_dx,
+    spot.dx_country,
+    spot.country,
+  ) ||
+  countryFromCbCallsign(
+    firstValue(
+      spot.callsign_dx,
+      spot.spotcall,
+      spot.callsign,
     ),
+  ),
 
     source: 'CRX',
 
