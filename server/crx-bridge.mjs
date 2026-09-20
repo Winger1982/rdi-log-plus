@@ -503,6 +503,25 @@ let keySource = savedApiKey ? 'saved-member' : 'server';
 );
 
   const rawSpots = Array.isArray(data?.spots) ? data.spots : [];
+   if (rawSpots.length > 0) {
+  const sample = rawSpots[0];
+
+  console.log('CRX RAW SAMPLE', {
+    spotcall: sample.spotcall,
+    callsign_dx: sample.callsign_dx,
+    callsign: sample.callsign,
+    spotter: sample.spotter,
+    callsign_sender: sample.callsign_sender,
+    dx_lat: sample.dx_lat,
+    dx_lon: sample.dx_lon,
+    spotter_lat: sample.spotter_lat,
+    spotter_lon: sample.spotter_lon,
+    locator_dx: sample.locator_dx,
+    spotter_locator: sample.spotter_locator,
+    country_dx: sample.country_dx,
+    country: sample.country,
+  });
+} 
   const rdiMembers = await loadActiveRdiMembers();
 
   const spots = rawSpots.map((spot) => {
