@@ -431,7 +431,9 @@ export default function RDILiveMap({
     : null;
 
   const dxCoords =
-    directCoords ?? maidenheadToLatLon(station.gridSquare);
+  station.source === 'CRX'
+    ? maidenheadToLatLon(station.gridSquare)
+    : directCoords ?? maidenheadToLatLon(station.gridSquare);
 
   if (!dxCoords) return null;
 
