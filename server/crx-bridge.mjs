@@ -542,6 +542,24 @@ let keySource = savedApiKey ? 'saved-member' : 'server';
       count: spots.length,
       mappableCount: spots.filter((spot) => spot.hasLocation).length,
       fetchedAt: new Date().toISOString(),
+      debugSample: rawSpots.length > 0
+  ? {
+      spotcall: rawSpots[0].spotcall,
+      callsign_dx: rawSpots[0].callsign_dx,
+      callsign: rawSpots[0].callsign,
+      spotter: rawSpots[0].spotter,
+      callsign_sender: rawSpots[0].callsign_sender,
+      dx_lat: rawSpots[0].dx_lat,
+      dx_lon: rawSpots[0].dx_lon,
+      spotter_lat: rawSpots[0].spotter_lat,
+      spotter_lon: rawSpots[0].spotter_lon,
+      locator_dx: rawSpots[0].locator_dx,
+      locator_sender: rawSpots[0].locator_sender,
+      spotter_locator: rawSpots[0].spotter_locator,
+      country_dx: rawSpots[0].country_dx,
+      country: rawSpots[0].country,
+    }
+  : null,
       spots,
     });
   } catch (error) {
