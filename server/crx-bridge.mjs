@@ -563,6 +563,7 @@ app.get('/api/muf-test', async (req, res) => {
         my_callsign: '9RDI01',
         dx_callsign: dxCallsign,
         my_locator: 'FN14UX',
+        dx_locator: 'JO22XN',
         compute_time: 2,
       },
       apiKey,
