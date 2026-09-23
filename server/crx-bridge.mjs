@@ -578,12 +578,14 @@ app.get('/api/muf-test', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({
-      ok: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'MUF lookup failed',
-    });
+  ok: false,
+  error:
+    error instanceof Error
+      ? error.message
+      : 'MUF lookup failed',
+  crxResponse:
+    error?.response?.data ?? null,
+});
   }
 });
 
