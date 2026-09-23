@@ -548,6 +548,45 @@ hasLocation: Boolean(
   };
 }
 
+app.get('/api/muf-test', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    await requireActiveRdiMember(userId);
+
+    const apiKey = await loadSavedCrxApiKey(userId);
+
+    const dxCallsign = String(req.query.dx || '19AT066').trim();
+
+    const data = await crxRequest(
+      'get_muf_calculation',
+      {
+        my_callsign: '9RDI01',
+        dx_callsign: dxCallsign,
+        my_locator: 'FN14UX',
+        compute_time: 2,
+      },
+      apiKey,
+    );
+
+    return res.json({
+      ok: true,
+      dxCallsign,
+      destination: data?.geo?.coordinates?.destination ?? null,
+      distanceKm: data?.geo?.distance_km ?? null,
+      azimuthDeg: data?.geo?.azimut_deg ?? null,
+      rawGeo: data?.geo ?? null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'MUF lookup failed',
+    });
+  }
+});
+
 app.get('/api/spots', async (req, res) => {
   try {
 const userId = await getAuthenticatedUserId(req);
