@@ -389,6 +389,36 @@ export default function RDILiveMap({
     }
   };
 
+  const testMufLocator = async () => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const headers: Record<string, string> = {};
+
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(
+      `${BRIDGE_BASE_URL}/api/muf-test?dx=19AT066`,
+      {
+        headers:
+          Object.keys(headers).length > 0
+            ? headers
+            : undefined,
+      },
+    );
+
+    const payload = await response.json();
+
+    console.log('CRX MUF TEST:', payload);
+  } catch (error) {
+    console.error('CRX MUF TEST FAILED:', error);
+  }
+};
+  
   useEffect(() => {
     if (dataMode === 'OFFLINE') {
       setBridgeSpots([]);
@@ -399,6 +429,7 @@ export default function RDILiveMap({
     }
 
     void fetchBridgeSpots();
+    void testMufLocator();
   }, [dataMode, mapConnected, clusterSpots]);
 
   const sourceStations = useMemo(() => {
