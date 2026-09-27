@@ -312,6 +312,7 @@ export default function RDILiveMap({
   const [selectedCallsign, setSelectedCallsign] = useState<string | null>(null);
   const [bridgeSpots, setBridgeSpots] = useState<MapStation[]>([]);
   const [stationLocations, setStationLocations] = useState<StationLocationRecord[]>([]);
+  const [stationLocationsLoaded, setStationLocationsLoaded] = useState(false);
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -379,14 +380,75 @@ export default function RDILiveMap({
     );
     
   } catch (error) {
-    console.error('Could not load station locations:', error);
+  console.error('Could not load station locations:', error);
+} finally {
+  setStationLocationsLoaded(true);
+}
+};
+
+const insertStationLocation = async (record: {
+  callsign: string;
+  locator: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  country: string | null;
+  source: string;
+  confidence: string;
+}) => {
+  const normalizedCallsign = record.callsign.trim().toUpperCase();
+
+  if (!normalizedCallsign) return;
+
+  const alreadyKnown = stationLocations.some(
+    (location) => location.callsign.toUpperCase() === normalizedCallsign
+  );
+
+  if (alreadyKnown) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('station_locations')
+      .insert({
+        callsign: normalizedCallsign,
+        locator: record.locator,
+        latitude: record.latitude,
+        longitude: record.longitude,
+        country: record.country,
+        source: record.source,
+        confidence: record.confidence,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data) {
+      setStationLocations((current) => [
+        ...current,
+        data as StationLocationRecord,
+      ]);
+    }
+  } catch (error) {
+    console.error('Could not save station location:', error);
   }
 };
 
   useEffect(() => {
-  void fetchStationLocations();
-}, []);
+  if (!stationLocationsLoaded || stationLocations.length !== 0) return;
 
+  void insertStationLocation({
+    callsign: '19AT066',
+    locator: 'JO22XN',
+    latitude: 52.5417,
+    longitude: 5.9167,
+    country: 'Netherlands',
+    source: 'rdi_verified',
+    confidence: 'high',
+  });
+}, [stationLocations, stationLocationsLoaded]);
+  
   const fetchBridgeSpots = async () => {
     if (dataMode !== 'ONLINE' || !mapConnected || clusterSpots) return;
 
