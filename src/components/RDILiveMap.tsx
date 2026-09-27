@@ -436,6 +436,10 @@ const insertStationLocation = async (record: {
 };
 
   useEffect(() => {
+  void fetchStationLocations();
+}, []);
+  
+  useEffect(() => {
   if (!stationLocationsLoaded || stationLocations.length !== 0) return;
 
   void insertStationLocation({
