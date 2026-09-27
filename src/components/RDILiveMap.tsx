@@ -43,6 +43,20 @@ type LatLon = {
   lon: number;
 };
 
+type StationLocationRecord = {
+  id: number;
+  callsign: string;
+  locator: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  country: string | null;
+  source: string | null;
+  confidence: string | null;
+  created_at: string;
+  last_seen: string;
+  times_seen: number;
+};
+
 type RDILiveMapProps = {
   dataMode?: DataMode;
   mapConnected?: boolean;
@@ -297,6 +311,7 @@ export default function RDILiveMap({
   
   const [selectedCallsign, setSelectedCallsign] = useState<string | null>(null);
   const [bridgeSpots, setBridgeSpots] = useState<MapStation[]>([]);
+  const [stationLocations, setStationLocations] = useState<StationLocationRecord[]>([]);
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -344,6 +359,33 @@ export default function RDILiveMap({
     () => maidenheadToLatLon(currentStation.gridSquare),
     [currentStation.gridSquare]
   );
+  
+  const fetchStationLocations = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('station_locations')
+      .select('*');
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('STATION LOCATIONS:', data);
+
+    setStationLocations(
+      Array.isArray(data)
+        ? (data as StationLocationRecord[])
+        : []
+    );
+    
+  } catch (error) {
+    console.error('Could not load station locations:', error);
+  }
+};
+
+  useEffect(() => {
+  void fetchStationLocations();
+}, []);
 
   const fetchBridgeSpots = async () => {
     if (dataMode !== 'ONLINE' || !mapConnected || clusterSpots) return;
