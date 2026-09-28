@@ -36,6 +36,7 @@ type MapStation = {
   frequency?: string;
   mode?: string;
   utcTime?: string;
+  comment?: string;
 };
 
 type LatLon = {
@@ -143,6 +144,16 @@ function clamp(value: number, min: number, max: number) {
 
 function normalizeGridSquare(grid: string) {
   return grid.trim().toUpperCase();
+}
+
+function extractMaidenheadFromComment(comment?: string) {
+  if (!comment) return '';
+
+  const match = comment
+    .toUpperCase()
+    .match(/\b[A-R]{2}\d{2}(?:[A-X]{2})?\b/);
+
+  return match?.[0] ?? '';
 }
 
 function maidenheadToLatLon(grid: string): LatLon | null {
@@ -439,20 +450,6 @@ const insertStationLocation = async (record: {
   void fetchStationLocations();
 }, []);
   
-  useEffect(() => {
-  if (!stationLocationsLoaded || stationLocations.length !== 0) return;
-
-  void insertStationLocation({
-    callsign: '19AT066',
-    locator: 'JO22XN',
-    latitude: 52.5417,
-    longitude: 5.9167,
-    country: 'Netherlands',
-    source: 'rdi_verified',
-    confidence: 'high',
-  });
-}, [stationLocations, stationLocationsLoaded]);
-  
   const fetchBridgeSpots = async () => {
     if (dataMode !== 'ONLINE' || !mapConnected || clusterSpots) return;
 
@@ -485,8 +482,52 @@ const insertStationLocation = async (record: {
         throw new Error(payload.error || 'Could not load live spots from bridge.');
       }
 
+      const incomingSpots = Array.isArray(payload.spots)
+  ? payload.spots
+  : [];
+
+if (stationLocationsLoaded) {
+  const seenThisFetch = new Set<string>();
+
+  for (const spot of incomingSpots) {
+    if (spot.source !== 'CRX') continue;
+
+    const normalizedCallsign = spot.callsign.trim().toUpperCase();
+
+    if (
+      !normalizedCallsign ||
+      seenThisFetch.has(normalizedCallsign)
+    ) {
+      continue;
+    }
+
+    seenThisFetch.add(normalizedCallsign);
+    
+    if (spot.gridSquare?.trim()) continue;
+    
+    const commentGrid =
+      extractMaidenheadFromComment(spot.comment);
+
+    if (!commentGrid) continue;
+
+    const coords = maidenheadToLatLon(commentGrid);
+
+    if (!coords) continue;
+
+    await insertStationLocation({
+      callsign: normalizedCallsign,
+      locator: commentGrid,
+      latitude: coords.lat,
+      longitude: coords.lon,
+      country: spot.country ?? null,
+      source: 'crx_comment',
+      confidence: 'high',
+    });
+  }
+}
+
       setBridgeConnected(true);
-      setBridgeSpots(Array.isArray(payload.spots) ? payload.spots : []);
+      setBridgeSpots(incomingSpots);
       setLastUpdated(payload.fetchedAt || new Date().toISOString());
     } catch (error) {
       setBridgeConnected(false);
@@ -569,10 +610,18 @@ const insertStationLocation = async (record: {
     ? { lat: latitude, lon: longitude }
     : null;
 
-  const dxCoords =
+  const commentGrid =
   station.source === 'CRX'
-    ? maidenheadToLatLon(station.gridSquare)
-    : directCoords ?? maidenheadToLatLon(station.gridSquare);
+    ? extractMaidenheadFromComment(station.comment)
+    : '';
+
+const effectiveGrid =
+  station.gridSquare || commentGrid;
+
+const dxCoords =
+  station.source === 'CRX'
+    ? maidenheadToLatLon(effectiveGrid)
+    : directCoords ?? maidenheadToLatLon(effectiveGrid);
 
   if (!dxCoords) return null;
 
@@ -595,6 +644,7 @@ const insertStationLocation = async (record: {
 
         return {
           station,
+          effectiveGrid,
           coords: dxCoords,
           lineFrom,
           distance,
@@ -603,6 +653,7 @@ const insertStationLocation = async (record: {
         };
       })
       .filter(Boolean) as Array<{
+        effectiveGrid: string;
         station: MapStation;
         coords: LatLon;
         lineFrom: LatLon;
@@ -770,7 +821,7 @@ const insertStationLocation = async (record: {
           )}
 
           {showLiveActivity &&
-            plottedStations.map(({ station, coords, distance, bearing, compass }) => (
+            plottedStations.map(({ station, effectiveGrid, coords, distance, bearing, compass }) => (
               <CircleMarker
                 key={`${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
                 center={[coords.lat, coords.lon]}
@@ -791,7 +842,7 @@ const insertStationLocation = async (record: {
                       {getPrefixFlag(station.callsign)} {station.callsign}
                     </div>
                     <div><strong>Country:</strong> {station.country ?? 'Unknown'}</div>
-                    <div><strong>Target grid:</strong> {station.gridSquare}</div>
+                    <div><strong>Target grid:</strong> {effectiveGrid || 'Unknown'}</div>
                     <div><strong>Your grid:</strong> {normalizedGrid}</div>
                     <div><strong>Source:</strong> {getSourceLabel(station)}</div>
                     {station.frequency && <div><strong>Frequency:</strong> {station.frequency}</div>}
