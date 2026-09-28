@@ -692,6 +692,15 @@ const effectiveGrid =
         
 const countryFallbackCoords =
   getCountryFallbackCoords(station.country); 
+
+  if (station.source === 'CRX') {
+    console.log(
+    'CRX COUNTRY FALLBACK:',
+    station.callsign,
+    station.country,
+    countryFallbackCoords
+  );
+} 
         
 const dxCoords =
   station.source === 'CRX'
