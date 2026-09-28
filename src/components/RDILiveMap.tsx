@@ -193,6 +193,34 @@ const COUNTRY_FALLBACK_COORDS: Record<string, LatLon> = {
   'New Zealand': { lat: -41.3, lon: 174.8 },
 
   'Canary Islands': { lat: 28.3, lon: -16.5 },
+    Venezuela: { lat: 6.4, lon: -66.6 },
+  Colombia: { lat: 4.6, lon: -74.1 },
+  'Netherlands Antilles': { lat: 12.2, lon: -69.0 },
+  Peru: { lat: -9.2, lon: -75.0 },
+  'Puerto Rico': { lat: 18.2, lon: -66.5 },
+  Uruguay: { lat: -32.5, lon: -55.8 },
+
+  Hawaii: { lat: 20.8, lon: -156.3 },
+  Alaska: { lat: 64.2, lon: -152.3 },
+
+  'French Guiana': { lat: 4.0, lon: -53.0 },
+  Jamaica: { lat: 18.1, lon: -77.3 },
+  Panama: { lat: 8.5, lon: -80.8 },
+
+  Japan: { lat: 36.2, lon: 138.3 },
+  Iceland: { lat: 64.9, lon: -18.6 },
+  'San Marino': { lat: 43.94, lon: 12.46 },
+
+  Russia: { lat: 61.5, lon: 105.3 },
+  Suriname: { lat: 4.0, lon: -56.0 },
+  Philippines: { lat: 12.9, lon: 121.8 },
+  Crete: { lat: 35.2, lon: 24.9 },
+  Indonesia: { lat: -2.5, lon: 118.0 },
+  Malta: { lat: 35.9, lon: 14.4 },
+  Corsica: { lat: 42.2, lon: 9.1 },
+  Hungary: { lat: 47.2, lon: 19.5 },
+  Lebanon: { lat: 33.9, lon: 35.9 },
+  Gambia: { lat: 13.4, lon: -15.4 },
 };
 
 function getCountryFallbackCoords(country?: string) {
