@@ -490,6 +490,12 @@ if (stationLocationsLoaded) {
   const seenThisFetch = new Set<string>();
 
   for (const spot of incomingSpots) {
+    console.log(
+  'CRX SPOT COMMENT:',
+  spot.callsign,
+  spot.gridSquare,
+  spot.comment
+);
     if (spot.source !== 'CRX') continue;
 
     const normalizedCallsign = spot.callsign.trim().toUpperCase();
