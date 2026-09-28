@@ -156,6 +156,51 @@ function extractMaidenheadFromComment(comment?: string) {
   return match?.[0] ?? '';
 }
 
+const COUNTRY_FALLBACK_COORDS: Record<string, LatLon> = {
+  Italy: { lat: 42.8, lon: 12.8 },
+  'United States': { lat: 39.8, lon: -98.6 },
+  Brazil: { lat: -10.8, lon: -52.9 },
+  Argentina: { lat: -34.0, lon: -64.0 },
+  Canada: { lat: 56.1, lon: -106.3 },
+  Mexico: { lat: 23.6, lon: -102.5 },
+
+  Germany: { lat: 51.2, lon: 10.4 },
+  France: { lat: 46.2, lon: 2.2 },
+  Netherlands: { lat: 52.1, lon: 5.3 },
+  Belgium: { lat: 50.8, lon: 4.5 },
+  Switzerland: { lat: 46.8, lon: 8.2 },
+  Austria: { lat: 47.5, lon: 14.6 },
+
+  Spain: { lat: 40.4, lon: -3.7 },
+  Portugal: { lat: 39.4, lon: -8.2 },
+  England: { lat: 52.5, lon: -1.5 },
+  Scotland: { lat: 56.5, lon: -4.2 },
+  'Northern Ireland': { lat: 54.7, lon: -6.7 },
+  Ireland: { lat: 53.2, lon: -8.2 },
+
+  Poland: { lat: 52.1, lon: 19.4 },
+  Norway: { lat: 61.0, lon: 8.0 },
+  Sweden: { lat: 62.0, lon: 15.0 },
+  Finland: { lat: 64.0, lon: 26.0 },
+  Denmark: { lat: 56.0, lon: 9.5 },
+
+  Greece: { lat: 39.0, lon: 22.0 },
+  Turkey: { lat: 39.0, lon: 35.0 },
+  Cyprus: { lat: 35.1, lon: 33.4 },
+
+  Chile: { lat: -33.4, lon: -70.7 },
+  Australia: { lat: -25.3, lon: 133.8 },
+  'New Zealand': { lat: -41.3, lon: 174.8 },
+
+  'Canary Islands': { lat: 28.3, lon: -16.5 },
+};
+
+function getCountryFallbackCoords(country?: string) {
+  if (!country) return null;
+
+  return COUNTRY_FALLBACK_COORDS[country.trim()] ?? null;
+}
+
 function maidenheadToLatLon(grid: string): LatLon | null {
   const g = normalizeGridSquare(grid);
 
@@ -621,13 +666,45 @@ if (stationLocationsLoaded) {
     ? extractMaidenheadFromComment(station.comment)
     : '';
 
-const effectiveGrid =
-  station.gridSquare || commentGrid;
+       const learnedLocation = stationLocations.find(
+  (location) =>
+    location.callsign.trim().toUpperCase() ===
+    station.callsign.trim().toUpperCase()
+);
 
+const learnedGrid =
+  learnedLocation?.locator?.trim().toUpperCase() ?? '';
+
+const learnedCoords =
+  learnedLocation &&
+  learnedLocation.latitude !== null &&
+  learnedLocation.longitude !== null
+    ? {
+        lat: learnedLocation.latitude,
+        lon: learnedLocation.longitude,
+      }
+    : learnedGrid
+      ? maidenheadToLatLon(learnedGrid)
+      : null; 
+        
+const effectiveGrid =
+  station.gridSquare || commentGrid || learnedGrid;
+        
+const countryFallbackCoords =
+  getCountryFallbackCoords(station.country); 
+        
 const dxCoords =
   station.source === 'CRX'
-    ? maidenheadToLatLon(effectiveGrid)
-    : directCoords ?? maidenheadToLatLon(effectiveGrid);
+  ? maidenheadToLatLon(effectiveGrid) ??
+  learnedCoords ??
+  countryFallbackCoords
+  : directCoords ?? maidenheadToLatLon(effectiveGrid);
+
+  const isApproximateLocation =
+  station.source === 'CRX' &&
+  !maidenheadToLatLon(effectiveGrid) &&
+  !learnedCoords &&
+  Boolean(countryFallbackCoords);
 
   if (!dxCoords) return null;
 
@@ -651,6 +728,7 @@ const dxCoords =
         return {
           station,
           effectiveGrid,
+          isApproximateLocation,
           coords: dxCoords,
           lineFrom,
           distance,
@@ -659,6 +737,7 @@ const dxCoords =
         };
       })
       .filter(Boolean) as Array<{
+        isApproximateLocation: boolean;
         effectiveGrid: string;
         station: MapStation;
         coords: LatLon;
@@ -667,7 +746,7 @@ const dxCoords =
         bearing: number;
         compass: string;
       }>;
-  }, [myCoords, sourceStations]);
+  }, [myCoords, sourceStations, stationLocations]);
 
   const sourceSummary = useMemo(() => {
     if (dataMode === 'ONLINE' && !mapConnected) {
@@ -827,7 +906,16 @@ const dxCoords =
           )}
 
           {showLiveActivity &&
-            plottedStations.map(({ station, effectiveGrid, coords, distance, bearing, compass }) => (
+            plottedStations.map(({
+              station,
+              effectiveGrid,
+              isApproximateLocation,
+              coords,
+              distance,
+              bearing,
+              compass,
+            }) => (
+              
               <CircleMarker
                 key={`${station.callsign}-${station.gridSquare}-${station.utcTime ?? 'na'}`}
                 center={[coords.lat, coords.lon]}
@@ -849,6 +937,10 @@ const dxCoords =
                     </div>
                     <div><strong>Country:</strong> {station.country ?? 'Unknown'}</div>
                     <div><strong>Target grid:</strong> {effectiveGrid || 'Unknown'}</div>
+                    <div>
+                      <strong>Location:</strong>{' '}
+                      {isApproximateLocation ? 'Approximate country centre' : 'Resolved'}
+                    </div>
                     <div><strong>Your grid:</strong> {normalizedGrid}</div>
                     <div><strong>Source:</strong> {getSourceLabel(station)}</div>
                     {station.frequency && <div><strong>Frequency:</strong> {station.frequency}</div>}
