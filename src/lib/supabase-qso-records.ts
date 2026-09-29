@@ -45,6 +45,7 @@ export async function syncQsoRecordsToSupabase(
 
     dx: record.dx ?? null,
     callsign: record.callsign ?? null,
+    target_grid: record.targetGrid ?? null,
     date: record.date ?? null,
     time: record.time ?? null,
     frequency: record.frequency ?? null,
