@@ -474,8 +474,6 @@ export default function RDILiveMap({
       throw error;
     }
 
-    console.log('STATION LOCATIONS:', data);
-
     setStationLocations(
       Array.isArray(data)
         ? (data as StationLocationRecord[])
