@@ -998,7 +998,7 @@ const dxCoords =
 
         {dataMode === 'ONLINE' && !fetchError && plottedStations.length === 0 && !isLoading && showLiveActivity && (
           <div style={offlineOverlayStyle}>
-            No live spots were returned yet. Use Refresh after logging in to the bridge.
+            No mappable live spots are available yet. Use Refresh to check for new CRX activity.
           </div>
         )}
       </div>
