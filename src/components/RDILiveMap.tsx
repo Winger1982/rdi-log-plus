@@ -229,6 +229,25 @@ function getCountryFallbackCoords(country?: string) {
   return COUNTRY_FALLBACK_COORDS[country.trim()] ?? null;
 }
 
+function offsetApproximateCoords(
+  coords: LatLon,
+  callsign: string
+): LatLon {
+  let hash = 0;
+
+  for (const char of callsign) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  const angle = ((hash % 360) * Math.PI) / 180;
+  const radius = 0.45 + ((hash % 5) * 0.08);
+
+  return {
+    lat: coords.lat + Math.sin(angle) * radius,
+    lon: coords.lon + Math.cos(angle) * radius,
+  };
+}
+
 function maidenheadToLatLon(grid: string): LatLon | null {
   const g = normalizeGridSquare(grid);
 
@@ -730,18 +749,29 @@ const countryFallbackCoords =
   );
 } 
         
+const countryFallbackCoords =
+  getCountryFallbackCoords(station.country);
+
+const approximateCoords =
+  countryFallbackCoords
+    ? offsetApproximateCoords(
+        countryFallbackCoords,
+        station.callsign
+      )
+    : null;
+
 const dxCoords =
   station.source === 'CRX'
-  ? maidenheadToLatLon(effectiveGrid) ??
-  learnedCoords ??
-  countryFallbackCoords
-  : directCoords ?? maidenheadToLatLon(effectiveGrid);
+    ? maidenheadToLatLon(effectiveGrid) ??
+      learnedCoords ??
+      approximateCoords
+    : directCoords ?? maidenheadToLatLon(effectiveGrid);
 
   const isApproximateLocation =
   station.source === 'CRX' &&
   !maidenheadToLatLon(effectiveGrid) &&
   !learnedCoords &&
-  Boolean(countryFallbackCoords);
+  Boolean(approximateCoords);
 
   if (!dxCoords) return null;
 
