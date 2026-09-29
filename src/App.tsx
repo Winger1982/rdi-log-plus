@@ -308,6 +308,102 @@ function normalizeFrequency(value: string | undefined): string {
   return mhz.toFixed(3);
 }
 
+function maidenheadToLatLon(grid: string) {
+  const g = grid.trim().toUpperCase();
+
+  if (!/^[A-R]{2}\d{2}(?:[A-X]{2})?$/.test(g)) {
+    return null;
+  }
+
+  const A = 'A'.charCodeAt(0);
+
+  const fieldLon = g.charCodeAt(0) - A;
+  const fieldLat = g.charCodeAt(1) - A;
+  const squareLon = Number.parseInt(g[2], 10);
+  const squareLat = Number.parseInt(g[3], 10);
+
+  let lon = fieldLon * 20 - 180 + squareLon * 2;
+  let lat = fieldLat * 10 - 90 + squareLat;
+
+  if (g.length >= 6) {
+    const subLon = g.charCodeAt(4) - A;
+    const subLat = g.charCodeAt(5) - A;
+
+    lon += subLon * (2 / 24);
+    lat += subLat * (1 / 24);
+
+    lon += (2 / 24) / 2;
+    lat += (1 / 24) / 2;
+  } else {
+    lon += 1;
+    lat += 0.5;
+  }
+
+  return { lat, lon };
+}
+
+async function learnStationLocationFromQso(record: RdiLogRecord) {
+  const callsign = (record.callsign || '').trim().toUpperCase();
+  const locator = (record.targetGrid || '').trim().toUpperCase();
+
+  if (!callsign || !locator) return;
+
+  const coords = maidenheadToLatLon(locator);
+  if (!coords) return;
+
+  const now = new Date().toISOString();
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('station_locations')
+    .select('id, times_seen')
+    .eq('callsign', callsign)
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error('Could not check learned station location:', lookupError);
+    return;
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from('station_locations')
+      .update({
+        locator,
+        latitude: coords.lat,
+        longitude: coords.lon,
+        source: 'qso_grid',
+        confidence: 'high',
+        last_seen: now,
+        times_seen: (existing.times_seen ?? 0) + 1,
+      })
+      .eq('id', existing.id);
+
+    if (error) {
+      console.error('Could not update learned station location:', error);
+    }
+
+    return;
+  }
+
+  const { error } = await supabase
+    .from('station_locations')
+    .insert({
+      callsign,
+      locator,
+      latitude: coords.lat,
+      longitude: coords.lon,
+      country: null,
+      source: 'qso_grid',
+      confidence: 'high',
+      last_seen: now,
+      times_seen: 1,
+    });
+
+  if (error) {
+    console.error('Could not learn station location from QSO:', error);
+  }
+}
+
 function sanitizeRecord(record: RdiLogRecord): RdiLogRecord | null {
   const frequency = normalizeFrequency(record.frequency);
   if (!frequency) return null;
@@ -796,6 +892,7 @@ if (
     const updatedRecords = [newRecord, ...records];
     persistRecords(activeLogbook.id, updatedRecords);
     setRecords(updatedRecords);
+    void learnStationLocationFromQso(newRecord);
     closeAddQsoModal();
   };
 
