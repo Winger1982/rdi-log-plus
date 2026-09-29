@@ -2,6 +2,7 @@ export type RdiLogRecord = {
   id: string;
   dx?: string;
   callsign?: string;
+  targetGrid?: string;
   date?: string;
   time?: string;
   frequency?: string;
