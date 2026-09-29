@@ -36,6 +36,7 @@ type ToolPreset = {
 
 type QsoForm = {
   callsign: string;
+  targetGrid: string;
   date: string;
   time: string;
   frequency: string;
@@ -327,6 +328,7 @@ function sanitizeRecord(record: RdiLogRecord): RdiLogRecord | null {
 function createEmptyQsoForm(): QsoForm {
   return {
     callsign: '',
+    targetGrid: '',
     date: getUtcDate(),
     time: getUtcTime(),
     frequency: '',
@@ -738,6 +740,16 @@ try {
       errors.callsign = 'Callsign is required.';
     }
 
+    const targetGrid = qsoForm.targetGrid.trim().toUpperCase();
+
+if (
+  targetGrid &&
+  !/^[A-R]{2}\d{2}(?:[A-X]{2})?$/.test(targetGrid)
+) {
+  errors.targetGrid =
+    'Target grid must be a valid 4- or 6-character Maidenhead locator.';
+}
+
     if (!qsoForm.date.trim()) {
       errors.date = 'UTC date is required.';
     }
@@ -771,6 +783,7 @@ try {
     const newRecord: RdiLogRecord = {
       id: crypto.randomUUID(),
       callsign: qsoForm.callsign.trim().toUpperCase(),
+      targetGrid: qsoForm.targetGrid.trim().toUpperCase(),
       date: normalizeDate(qsoForm.date),
       time: normalizeTime(qsoForm.time),
       frequency: normalizeFrequency(qsoForm.frequency),
@@ -915,6 +928,24 @@ try {
                   />
                   {qsoErrors.callsign && <div style={errorStyle}>{qsoErrors.callsign}</div>}
                 </div>
+
+                <div>
+                  <label style={labelStyle}>Target Grid</label>
+                  <input
+                    style={inputStyle(qsoErrors.targetGrid)}
+                    value={qsoForm.targetGrid}
+                    onChange={(e) =>
+                        setQsoForm((prev) => ({
+                            ...prev,
+                    targetGrid: e.target.value.toUpperCase(),
+                  }))
+               }
+               placeholder="JO22XN"
+              />
+              {qsoErrors.targetGrid && (
+                <div style={errorStyle}>{qsoErrors.targetGrid}</div>
+              )}
+            </div>
 
                 <div>
                   <label style={labelStyle}>UTC Date</label>
