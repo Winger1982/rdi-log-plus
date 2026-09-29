@@ -582,12 +582,7 @@ if (stationLocationsLoaded) {
   const seenThisFetch = new Set<string>();
 
   for (const spot of incomingSpots) {
-    console.log(
-  'CRX SPOT COMMENT:',
-  spot.callsign,
-  spot.gridSquare,
-  spot.comment
-);
+    
     if (spot.source !== 'CRX') continue;
 
     const normalizedCallsign = spot.callsign.trim().toUpperCase();
@@ -635,37 +630,7 @@ if (stationLocationsLoaded) {
       setIsLoading(false);
     }
   };
-
-  const testMufLocator = async () => {
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const headers: Record<string, string> = {};
-
-    if (session?.access_token) {
-      headers.Authorization = `Bearer ${session.access_token}`;
-    }
-
-    const response = await fetch(
-      `${BRIDGE_BASE_URL}/api/muf-test?dx=19AT066`,
-      {
-        headers:
-          Object.keys(headers).length > 0
-            ? headers
-            : undefined,
-      },
-    );
-
-    const payload = await response.json();
-
-    console.log('CRX MUF TEST:', payload);
-  } catch (error) {
-    console.error('CRX MUF TEST FAILED:', error);
-  }
-};
-  
+          
   useEffect(() => {
     if (dataMode === 'OFFLINE') {
       setBridgeSpots([]);
@@ -676,7 +641,6 @@ if (stationLocationsLoaded) {
     }
 
     void fetchBridgeSpots();
-    void testMufLocator();
   }, [dataMode, mapConnected, clusterSpots]);
 
   const sourceStations = useMemo(() => {
@@ -739,18 +703,6 @@ const effectiveGrid =
         
 const countryFallbackCoords =
   getCountryFallbackCoords(station.country); 
-
-  if (station.source === 'CRX') {
-    console.log(
-    'CRX COUNTRY FALLBACK:',
-    station.callsign,
-    station.country,
-    countryFallbackCoords
-  );
-} 
-        
-const countryFallbackCoords =
-  getCountryFallbackCoords(station.country);
 
 const approximateCoords =
   countryFallbackCoords
