@@ -863,6 +863,7 @@ const dxCoords =
                 key={`prop-${index}`}
                 center={region.center}
                 radius={region.radius}
+                interactive={false}
                 pathOptions={{
                   color: region.color,
                   weight: 0,
