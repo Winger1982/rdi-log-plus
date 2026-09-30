@@ -1230,6 +1230,16 @@ export default function RDIConsoleMockup({
       errors.callsign = 'Callsign is required.';
     }
 
+    const targetGrid = editContactDraft.targetGrid.trim().toUpperCase();
+
+if (
+  targetGrid &&
+  !/^[A-R]{2}\d{2}(?:[A-X]{2})?$/.test(targetGrid)
+) {
+  errors.targetGrid =
+    'Target grid must be a valid 4- or 6-character Maidenhead locator.';
+}
+
     if (!normalizeDate(editContactDraft.date)) {
       errors.date = 'UTC date must be valid.';
     }
@@ -1259,6 +1269,7 @@ export default function RDIConsoleMockup({
 
     onUpdateQso(selectedEditContact.id, {
       callsign: editContactDraft.callsign.trim().toUpperCase(),
+      targetGrid: editContactDraft.targetGrid.trim().toUpperCase(),
       date: normalizeDate(editContactDraft.date),
       time: normalizeTime(editContactDraft.time),
       frequency: normalizeFrequency(editContactDraft.frequency),
