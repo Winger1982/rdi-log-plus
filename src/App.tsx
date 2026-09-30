@@ -411,6 +411,7 @@ function sanitizeRecord(record: RdiLogRecord): RdiLogRecord | null {
   return {
     ...record,
     callsign: (record.callsign || '').trim().toUpperCase(),
+    targetGrid: (record.targetGrid || '').trim().toUpperCase(),
     date: normalizeDate(record.date),
     time: normalizeTime(record.time),
     frequency,
