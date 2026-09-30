@@ -875,6 +875,7 @@ const dxCoords =
 
           {showWeatherLayer && hasWeatherApiKey && (
             <TileLayer
+              className="rdi-weather-overlay"
               url={buildOpenWeatherTileUrl('precipitation_new')}
               opacity={0.82}
               zIndex={350}
