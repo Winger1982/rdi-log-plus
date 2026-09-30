@@ -726,6 +726,7 @@ try {
 
     const headers = [
       'callsign',
+      'targetGrid',
       'date',
       'time',
       'frequency',
