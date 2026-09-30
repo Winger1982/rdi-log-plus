@@ -943,6 +943,7 @@ if (
 
     persistRecords(activeLogbook.id, updatedRecords);
     setRecords(updatedRecords);
+    void learnStationLocationFromQso(sanitized);
   };
 
   const handleDeleteQso = (recordId: string) => {
