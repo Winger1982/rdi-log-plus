@@ -87,6 +87,7 @@ type PropagationApiResponse = {
 
 type EditContactForm = {
   callsign: string;
+  targetGrid: string;
   date: string;
   time: string;
   frequency: string;
@@ -349,6 +350,7 @@ function normalizeFrequency(value: string | undefined): string {
 function createEditContactForm(record: RdiLogRecord): EditContactForm {
   return {
     callsign: record.callsign || '',
+    targetGrid: record.targetGrid || '',
     date: record.date || '',
     time: record.time || '',
     frequency: record.frequency || '',
@@ -2651,6 +2653,18 @@ if (!authUser) {
                   </div>
                 )}
               </div>
+
+              <div>
+                
+              <div style={labelStyle}>Target Grid</div>
+              <input
+                type="text"
+                value={editContactDraft.targetGrid}
+                onChange={handleEditDraftChange('targetGrid')}
+                style={editInputStyle(editContactErrors.targetGrid)}
+                disabled={!editContactIsEditing}
+               />
+             </div>
 
               <div>
                 <div style={labelStyle}>UTC Date</div>
