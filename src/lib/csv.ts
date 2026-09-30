@@ -26,6 +26,7 @@ export function parseSimpleCSV(content: string): RdiLogRecord[] {
       id: makeId(),
       dx: get('DX'),
       callsign: get('DX') || get('CALLSIGN'),
+      targetGrid: get('TARGETGRID') || get('TARGET_GRID'),
       date: get('DATE'),
       time: get('UTC') || get('TIME'),
       frequency: get('FREQUENCY'),
