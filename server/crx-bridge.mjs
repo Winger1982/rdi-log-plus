@@ -339,6 +339,11 @@ app.post('/api/crx/test-key', async (req, res) => {
       message: 'CRX API key accepted and saved securely.',
     });
   } catch (error) {
+    console.error(
+  'CRX test-key failed:',
+  error instanceof Error ? error.message : error,
+  error?.response?.data ?? null,
+);
     return res.status(401).json({
       ok: false,
       error:
